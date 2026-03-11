@@ -1,0 +1,35 @@
+import {
+  IsArray, IsEnum, IsOptional, IsString, IsUUID,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { RequestStatus } from '../../../common/enums';
+
+export class AnswerDto {
+  @IsUUID()
+  formFieldId: string;
+
+  @IsString()
+  value: string;
+}
+
+export class CreateRequestDto {
+  @IsUUID()
+  formTemplateId: string;
+
+  @IsOptional() @IsUUID()
+  companyId?: string;
+
+  @IsOptional() @IsUUID()
+  recruiterId?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AnswerDto)
+  answers: AnswerDto[];
+}
+
+export class UpdateRequestStatusDto {
+  @IsEnum(RequestStatus)
+  status: RequestStatus;
+}

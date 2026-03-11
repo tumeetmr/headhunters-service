@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String            @id @default(uuid()) @db.Uuid
+  email            String            @unique
+  password         String
+  name             String
+  role             String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  recruiterProfile RecruiterProfile?
+  company          Company?
+}
+
+model RecruiterProfile {
+  id              String  @id @default(uuid()) @db.Uuid
+  userId          String  @unique @db.Uuid
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Public identity
+  slug            String? @unique
+  title           String?
+  tagline         String?
+  bio             String?
+  photoUrl        String?
+  heroImageUrl    String?
+  yearsExperience Int?
+  isLeadPartner   Boolean @default(false)
+  partnerBadge    String?
+
+  // Contact
+  publicEmail String?
+  publicPhone String?
+  location    String?
+  timezone    String?
+
+  // Meta
+  rating      Float    @default(0)
+  visibility  String   @default("DRAFT")
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  skills         Skill[]
+  tags           RecruiterTag[]
+  links          RecruiterLink[]
+  activeSearches RecruiterActiveSearch[]
+  insights       RecruiterInsight[]
+  requests       RecruitRequest[]
+
+  @@index([visibility])
+}
+
+model Company {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String?  @unique
+  industry    String?
+  website     String?
+  logoUrl     String?
+  description String?
+  size        String?
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  skills   Skill[]
+  requests RecruitRequest[]
+}
+
+model Skill {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recruiters RecruiterProfile[]
+  companies  Company[]
+}
+
+model RecruiterTag {
+  id                 String   @id @default(uuid()) @db.Uuid
+  recruiterProfileId String   @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  type               String
+  value              String
+  meta               String?
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([recruiterProfileId, type, value])
+  @@index([recruiterProfileId, type])
+}
+
+model RecruiterLink {
+  id                 String   @id @default(uuid()) @db.Uuid
+  recruiterProfileId String   @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  type               String
+  label              String?
+  url                String
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([recruiterProfileId, type, url])
+}
+
+model RecruiterActiveSearch {
+  id                 String   @id @default(uuid()) @db.Uuid
+  recruiterProfileId String   @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  title              String
+  level              String?
+  industry           String?
+  location           String?
+  summary            String?
+  status             String   @default("ACTIVE")
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([recruiterProfileId, status])
+}
+
+
+model RecruiterInsight {
+  id                 String   @id @default(uuid()) @db.Uuid
+  recruiterProfileId String   @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  mediaUrl           String?
+  thumbnailUrl       String?
+  status             String   @default("DRAFT")
+  sortOrder          Int      @default(0)
+  publishedAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([recruiterProfileId, status])
+}
+
+model FormTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fields   FormField[]
+  requests RecruitRequest[]
+}
+
+model FormField {
+  id             String   @id @default(uuid()) @db.Uuid
+  formTemplateId String   @db.Uuid
+  formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+  key            String
+  label          String
+  type           String   @default("TEXT")
+  placeholder    String?
+  options        String?
+  isRequired     Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  answers RequestAnswer[]
+
+  @@unique([formTemplateId, key])
+  @@index([formTemplateId, sortOrder])
+}
+
+model RecruitRequest {
+  id             String   @id @default(uuid()) @db.Uuid
+  formTemplateId String   @db.Uuid
+  formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id])
+  companyId      String?  @db.Uuid
+  company        Company?         @relation(fields: [companyId], references: [id])
+  recruiterId    String?  @db.Uuid
+  recruiter      RecruiterProfile? @relation(fields: [recruiterId], references: [id])
+  status         String   @default("PENDING")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  answers RequestAnswer[]
+
+  @@index([status])
+  @@index([companyId])
+  @@index([recruiterId])
+}
+
+model RequestAnswer {
+  id               String   @id @default(uuid()) @db.Uuid
+  recruitRequestId String   @db.Uuid
+  recruitRequest   RecruitRequest @relation(fields: [recruitRequestId], references: [id], onDelete: Cascade)
+  formFieldId      String   @db.Uuid
+  formField        FormField @relation(fields: [formFieldId], references: [id])
+  value            String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([recruitRequestId, formFieldId])
+}
