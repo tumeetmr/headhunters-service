@@ -26,6 +26,7 @@ interface RecruiterSeed {
   linkedin?: string;
   phone?: string;
   photoUrl?: string;
+  insights?: { title: string; description?: string; mediaUrl?: string; thumbnailUrl?: string }[];
 }
 
 const recruiters: RecruiterSeed[] = [
@@ -42,6 +43,12 @@ const recruiters: RecruiterSeed[] = [
     linkedin: 'https://www.linkedin.com/in/ochirzaya-bayarrentsen-8baa32b0',
     phone: '88886418',
     photoUrl: 'https://drive.google.com/uc?export=view&id=1syJaL3bQQrMYY68bte6UPLssDG-JSGEN',
+    insights: [
+      {
+        title: 'Ochirzaya Insight',
+        mediaUrl: 'https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F1295006249169500%2F&show_text=false&width=267&t=0',
+      }
+    ]
   },
   {
     name: 'М.Оюун-Ундрам',
@@ -146,6 +153,12 @@ const recruiters: RecruiterSeed[] = [
       'https://www.linkedin.com/in/munkhjargal-damdinsuren-a680b7187/',
     phone: '88103678',
     photoUrl: 'https://drive.google.com/uc?export=view&id=1PmgbXPcJJNz3e5hiOCtKyFmGTEjEz2MD',
+    insights: [
+      {
+        title: 'Munkhjargal Insight',
+        mediaUrl: 'https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F1494519638767519%2F&show_text=false&width=267&t=0',
+      }
+    ]
   },
   {
     name: 'Э.Үүрцайх',
@@ -205,7 +218,13 @@ const recruiters: RecruiterSeed[] = [
     bio: 'Үндэстэн дамнасан компаниудад рекрутерээр ажилласан туршлагатай. Англи, Хятад хэлээр чөлөөтэй харилцдаг.',
     linkedin: 'https://www.linkedin.com/in/ganchimegg/',
     phone: '72111272',
-    photoUrl: 'https://drive.google.com/uc?export=view&id=1DaOPMOPwX3mx4G-8fkpFwMUXRgIXHUBu'
+    photoUrl: 'https://drive.google.com/uc?export=view&id=1DaOPMOPwX3mx4G-8fkpFwMUXRgIXHUBu',
+    insights: [
+      {
+        title: 'Ganchimeg Insight',
+        mediaUrl: 'https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F905125295733382%2F&show_text=false&width=267&t=0',
+      }
+    ]
   },
   {
     name: 'М.Зулаа',
@@ -248,6 +267,12 @@ const recruiters: RecruiterSeed[] = [
     linkedin: 'https://www.linkedin.com/in/ariunaa-ser-od-2a156516a/',
     phone: '99105053',
     photoUrl: 'https://drive.google.com/uc?export=view&id=1KjJi_6AvkMZ3dcSbJw0iT-A_c1fSzGrI',
+    insights: [
+      {
+        title: 'Ariunaa Insight',
+        mediaUrl: 'https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F1416007530205354%2F&show_text=false&width=267&t=0',
+      },
+    ],
   },
   {
     name: 'Т.Баярмаа',
@@ -273,7 +298,13 @@ const recruiters: RecruiterSeed[] = [
     bio: 'Борлуулалт, маркетинг, худалдааны салбаруудад мэргэшсэн чадварлаг хүний нөөцийн рекрутер.',
     linkedin: 'https://www.linkedin.com/in/ganchimeg-enebish/',
     phone: '88094000',
-    photoUrl: 'https://drive.google.com/uc?export=view&id=1etczTlOp1nyQ4W_j4Q2HuhbewNv6llYT'
+    photoUrl: 'https://drive.google.com/uc?export=view&id=1etczTlOp1nyQ4W_j4Q2HuhbewNv6llYT',
+    insights: [
+      {
+        title: 'Ganchimeg Insight',
+        mediaUrl: 'https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F799266812699995%2F&show_text=false&width=267&t=0',
+      }
+    ]
   },
   {
     name: 'Н.Амаржаргал',
@@ -318,6 +349,12 @@ const recruiters: RecruiterSeed[] = [
     bio: 'Монголын томоохон групп компаниудад хүний нөөцийн бодлого хэрэгжүүлсэн. Дасгалжуулалтын академийн ментор.',
     linkedin: 'https://www.linkedin.com/in/dulam-gansukh-511b0079/',
     photoUrl: 'https://drive.google.com/uc?export=view&id=1D5V4Qr0C3-JpV-rqjNKYDKD2hQRItMRW',
+    insights: [
+      {
+        title: 'Dulam Insight',
+        mediaUrl: 'https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F948975324263440%2F&show_text=false&width=267&t=0',
+      }
+    ]
   },
 ];
 
@@ -464,6 +501,25 @@ async function main() {
           url: phoneUrl,
         },
       });
+    }
+
+    // 6. Create RecruiterInsights
+    if (r.insights) {
+      for (let i = 0; i < r.insights.length; i++) {
+        const insight = r.insights[i];
+        await prisma.recruiterInsight.create({
+          data: {
+            recruiterProfileId: profile.id,
+            title: insight.title,
+            description: insight.description ?? null,
+            mediaUrl: insight.mediaUrl ?? null,
+            thumbnailUrl: insight.thumbnailUrl ?? null,
+            status: 'PUBLISHED',
+            sortOrder: i,
+            publishedAt: new Date(),
+          },
+        });
+      }
     }
 
     console.log(`  ✓ ${r.name} (${r.slug})`);
