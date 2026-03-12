@@ -1,81 +1,41 @@
-/*
-  Warnings:
+-- CreateTable
+CREATE TABLE "User" (
+    "id" UUID NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-  - You are about to drop the column `message` on the `RecruitRequest` table. All the data in the column will be lost.
-  - You are about to drop the column `talentId` on the `RecruitRequest` table. All the data in the column will be lost.
-  - The `status` column on the `RecruitRequest` table would be dropped and recreated. This will lead to data loss if there is data in the column.
-  - You are about to drop the column `company` on the `RecruiterProfile` table. All the data in the column will be lost.
-  - You are about to drop the `TalentProfile` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `_SkillToTalentProfile` table. If the table is not empty, all the data it contains will be lost.
-  - A unique constraint covering the columns `[slug]` on the table `RecruiterProfile` will be added. If there are existing duplicate values, this will fail.
-  - Added the required column `formTemplateId` to the `RecruitRequest` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updatedAt` to the `RecruiterProfile` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updatedAt` to the `Skill` table without a default value. This is not possible if the table is not empty.
-  - Changed the type of `role` on the `User` table. No cast exists, the column would be dropped and recreated, which cannot be done if there is data, since the column is required.
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
 
-*/
--- DropForeignKey
-ALTER TABLE "RecruitRequest" DROP CONSTRAINT "RecruitRequest_recruiterId_fkey";
+-- CreateTable
+CREATE TABLE "RecruiterProfile" (
+    "id" UUID NOT NULL,
+    "userId" UUID NOT NULL,
+    "slug" TEXT,
+    "title" TEXT,
+    "tagline" TEXT,
+    "bio" TEXT,
+    "photoUrl" TEXT,
+    "heroImageUrl" TEXT,
+    "yearsExperience" INTEGER,
+    "isLeadPartner" BOOLEAN NOT NULL DEFAULT false,
+    "partnerBadge" TEXT,
+    "publicEmail" TEXT,
+    "publicPhone" TEXT,
+    "location" TEXT,
+    "timezone" TEXT,
+    "rating" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "visibility" TEXT NOT NULL DEFAULT 'DRAFT',
+    "publishedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
--- DropForeignKey
-ALTER TABLE "RecruitRequest" DROP CONSTRAINT "RecruitRequest_talentId_fkey";
-
--- DropForeignKey
-ALTER TABLE "TalentProfile" DROP CONSTRAINT "TalentProfile_userId_fkey";
-
--- DropForeignKey
-ALTER TABLE "_SkillToTalentProfile" DROP CONSTRAINT "_SkillToTalentProfile_A_fkey";
-
--- DropForeignKey
-ALTER TABLE "_SkillToTalentProfile" DROP CONSTRAINT "_SkillToTalentProfile_B_fkey";
-
--- AlterTable
-ALTER TABLE "RecruitRequest" DROP COLUMN "message",
-DROP COLUMN "talentId",
-ADD COLUMN     "companyId" UUID,
-ADD COLUMN     "formTemplateId" UUID NOT NULL,
-ALTER COLUMN "recruiterId" DROP NOT NULL,
-DROP COLUMN "status",
-ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'PENDING';
-
--- AlterTable
-ALTER TABLE "RecruiterProfile" DROP COLUMN "company",
-ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "heroImageUrl" TEXT,
-ADD COLUMN     "isLeadPartner" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "location" TEXT,
-ADD COLUMN     "partnerBadge" TEXT,
-ADD COLUMN     "photoUrl" TEXT,
-ADD COLUMN     "publicEmail" TEXT,
-ADD COLUMN     "publicPhone" TEXT,
-ADD COLUMN     "publishedAt" TIMESTAMP(3),
-ADD COLUMN     "slug" TEXT,
-ADD COLUMN     "tagline" TEXT,
-ADD COLUMN     "timezone" TEXT,
-ADD COLUMN     "title" TEXT,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL,
-ADD COLUMN     "visibility" TEXT NOT NULL DEFAULT 'DRAFT',
-ADD COLUMN     "yearsExperience" INTEGER;
-
--- AlterTable
-ALTER TABLE "Skill" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
-
--- AlterTable
-ALTER TABLE "User" DROP COLUMN "role",
-ADD COLUMN     "role" TEXT NOT NULL;
-
--- DropTable
-DROP TABLE "TalentProfile";
-
--- DropTable
-DROP TABLE "_SkillToTalentProfile";
-
--- DropEnum
-DROP TYPE "RequestStatus";
-
--- DropEnum
-DROP TYPE "Role";
+    CONSTRAINT "RecruiterProfile_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "Company" (
@@ -93,6 +53,16 @@ CREATE TABLE "Company" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Company_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Skill" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Skill_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -186,6 +156,19 @@ CREATE TABLE "FormField" (
 );
 
 -- CreateTable
+CREATE TABLE "RecruitRequest" (
+    "id" UUID NOT NULL,
+    "formTemplateId" UUID NOT NULL,
+    "companyId" UUID,
+    "recruiterId" UUID,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "RecruitRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "RequestAnswer" (
     "id" UUID NOT NULL,
     "recruitRequestId" UUID NOT NULL,
@@ -198,6 +181,14 @@ CREATE TABLE "RequestAnswer" (
 );
 
 -- CreateTable
+CREATE TABLE "_RecruiterProfileToSkill" (
+    "A" UUID NOT NULL,
+    "B" UUID NOT NULL,
+
+    CONSTRAINT "_RecruiterProfileToSkill_AB_pkey" PRIMARY KEY ("A","B")
+);
+
+-- CreateTable
 CREATE TABLE "_CompanyToSkill" (
     "A" UUID NOT NULL,
     "B" UUID NOT NULL,
@@ -206,10 +197,25 @@ CREATE TABLE "_CompanyToSkill" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RecruiterProfile_userId_key" ON "RecruiterProfile"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RecruiterProfile_slug_key" ON "RecruiterProfile"("slug");
+
+-- CreateIndex
+CREATE INDEX "RecruiterProfile_visibility_idx" ON "RecruiterProfile"("visibility");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Company_userId_key" ON "Company"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Company_slug_key" ON "Company"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Skill_name_key" ON "Skill"("name");
 
 -- CreateIndex
 CREATE INDEX "RecruiterTag_recruiterProfileId_type_idx" ON "RecruiterTag"("recruiterProfileId", "type");
@@ -236,12 +242,6 @@ CREATE INDEX "FormField_formTemplateId_sortOrder_idx" ON "FormField"("formTempla
 CREATE UNIQUE INDEX "FormField_formTemplateId_key_key" ON "FormField"("formTemplateId", "key");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "RequestAnswer_recruitRequestId_formFieldId_key" ON "RequestAnswer"("recruitRequestId", "formFieldId");
-
--- CreateIndex
-CREATE INDEX "_CompanyToSkill_B_index" ON "_CompanyToSkill"("B");
-
--- CreateIndex
 CREATE INDEX "RecruitRequest_status_idx" ON "RecruitRequest"("status");
 
 -- CreateIndex
@@ -251,10 +251,16 @@ CREATE INDEX "RecruitRequest_companyId_idx" ON "RecruitRequest"("companyId");
 CREATE INDEX "RecruitRequest_recruiterId_idx" ON "RecruitRequest"("recruiterId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "RecruiterProfile_slug_key" ON "RecruiterProfile"("slug");
+CREATE UNIQUE INDEX "RequestAnswer_recruitRequestId_formFieldId_key" ON "RequestAnswer"("recruitRequestId", "formFieldId");
 
 -- CreateIndex
-CREATE INDEX "RecruiterProfile_visibility_idx" ON "RecruiterProfile"("visibility");
+CREATE INDEX "_RecruiterProfileToSkill_B_index" ON "_RecruiterProfileToSkill"("B");
+
+-- CreateIndex
+CREATE INDEX "_CompanyToSkill_B_index" ON "_CompanyToSkill"("B");
+
+-- AddForeignKey
+ALTER TABLE "RecruiterProfile" ADD CONSTRAINT "RecruiterProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Company" ADD CONSTRAINT "Company_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -288,6 +294,12 @@ ALTER TABLE "RequestAnswer" ADD CONSTRAINT "RequestAnswer_recruitRequestId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "RequestAnswer" ADD CONSTRAINT "RequestAnswer_formFieldId_fkey" FOREIGN KEY ("formFieldId") REFERENCES "FormField"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_RecruiterProfileToSkill" ADD CONSTRAINT "_RecruiterProfileToSkill_A_fkey" FOREIGN KEY ("A") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_RecruiterProfileToSkill" ADD CONSTRAINT "_RecruiterProfileToSkill_B_fkey" FOREIGN KEY ("B") REFERENCES "Skill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_CompanyToSkill" ADD CONSTRAINT "_CompanyToSkill_A_fkey" FOREIGN KEY ("A") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
