@@ -1,10 +1,17 @@
 import {
-  Controller, Get, Post, Put, Delete,
-  Param, Body, ParseUUIDPipe,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../../common/enums';
 
@@ -16,6 +23,11 @@ export class UsersController {
   @Roles(Role.ADMIN)
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
+  }
+
+  @Get('profile')
+  getMe(@CurrentUser('id') userId: string) {
+    return this.usersService.getUserWithProfile(userId);
   }
 
   @Get()
@@ -32,10 +44,7 @@ export class UsersController {
 
   @Put(':id')
   @Roles(Role.ADMIN)
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateUserDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
   }
 

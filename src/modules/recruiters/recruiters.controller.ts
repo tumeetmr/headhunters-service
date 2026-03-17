@@ -1,6 +1,13 @@
 import {
-  Controller, Get, Post, Put, Delete,
-  Param, Body, Query, ParseUUIDPipe,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { RecruitersService } from './recruiters.service';
 import { CreateRecruiterProfileDto } from './dto/create-recruiter.dto';
@@ -9,6 +16,7 @@ import { CreateRecruiterTagDto } from './dto/create-recruiter-tag.dto';
 import { CreateRecruiterLinkDto } from './dto/create-recruiter-link.dto';
 import { CreateActiveSearchDto } from './dto/create-active-search.dto';
 import { CreateInsightDto } from './dto/create-insight.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { Role } from '../../common/enums';
@@ -37,14 +45,19 @@ export class RecruitersController {
     return this.recruitersService.findBySlug(slug);
   }
 
-  @Public()
-  @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.recruitersService.findOne(id);
+  // Own Recruiter APIs
+  @Put()
+  @Roles(Role.RECRUITER)
+  updateMe(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateRecruiterProfileDto,
+  ) {
+    return this.recruitersService.updateByUserId(userId, dto);
   }
 
+  // Admin APIs
   @Put(':id')
-  @Roles(Role.RECRUITER, Role.ADMIN)
+  @Roles(Role.ADMIN)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateRecruiterProfileDto,

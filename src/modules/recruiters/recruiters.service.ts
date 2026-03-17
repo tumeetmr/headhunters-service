@@ -8,8 +8,10 @@ import { CreateActiveSearchDto } from './dto/create-active-search.dto';
 import { CreateInsightDto } from './dto/create-insight.dto';
 
 const PROFILE_INCLUDE = {
-  skills: true,
-  tags: { orderBy: { sortOrder: 'asc' as const } },
+  tags: {
+    include: { skill: true },
+    orderBy: { sortOrder: 'asc' as const },
+  },
   links: { orderBy: { sortOrder: 'asc' as const } },
   activeSearches: { orderBy: { sortOrder: 'asc' as const } },
   insights: { orderBy: { sortOrder: 'asc' as const } },
@@ -26,8 +28,16 @@ export class RecruitersService {
     return this.prisma.recruiterProfile.create({
       data: {
         ...data,
-        skills: skillIds?.length
-          ? { connect: skillIds.map((id) => ({ id })) }
+        tags: skillIds?.length
+          ? {
+              createMany: {
+                data: skillIds.map((skillId, index) => ({
+                  skillId,
+                  sortOrder: index,
+                })),
+                skipDuplicates: true,
+              },
+            }
           : undefined,
       },
       include: PROFILE_INCLUDE,
@@ -56,7 +66,8 @@ export class RecruitersService {
       where: { slug },
       include: PROFILE_INCLUDE,
     });
-    if (!profile) throw new NotFoundException(`Recruiter slug "${slug}" not found`);
+    if (!profile)
+      throw new NotFoundException(`Recruiter slug "${slug}" not found`);
     return profile;
   }
 
@@ -67,12 +78,35 @@ export class RecruitersService {
       where: { id },
       data: {
         ...data,
-        skills: skillIds
-          ? { set: skillIds.map((sid) => ({ id: sid })) }
-          : undefined,
+        ...(skillIds
+          ? {
+              tags: {
+                deleteMany: {},
+                createMany: {
+                  data: skillIds.map((skillId, index) => ({
+                    skillId,
+                    sortOrder: index,
+                  })),
+                  skipDuplicates: true,
+                },
+              },
+            }
+          : {}),
       },
       include: PROFILE_INCLUDE,
     });
+  }
+
+  async updateByUserId(userId: string, dto: UpdateRecruiterProfileDto) {
+    const profile = await this.prisma.recruiterProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile)
+      throw new NotFoundException(
+        `Recruiter profile for user ${userId} not found`,
+      );
+
+    return this.update(profile.id, dto);
   }
 
   async remove(id: string) {
@@ -83,13 +117,14 @@ export class RecruitersService {
   // ─── Tags ──────────────────────────────────────────────
 
   addTag(profileId: string, dto: CreateRecruiterTagDto) {
-    return this.prisma.recruiterTag.create({
+    return this.prisma.tag.create({
       data: { recruiterProfileId: profileId, ...dto },
+      include: { skill: true },
     });
   }
 
   removeTag(tagId: string) {
-    return this.prisma.recruiterTag.delete({ where: { id: tagId } });
+    return this.prisma.tag.delete({ where: { id: tagId } });
   }
 
   // ─── Links ─────────────────────────────────────────────
@@ -107,20 +142,22 @@ export class RecruitersService {
   // ─── Active Searches ──────────────────────────────────
 
   addSearch(profileId: string, dto: CreateActiveSearchDto) {
-    return this.prisma.recruiterActiveSearch.create({
+    return this.prisma.activeSearch.create({
       data: { recruiterProfileId: profileId, ...dto },
     });
   }
 
   updateSearch(searchId: string, dto: Partial<CreateActiveSearchDto>) {
-    return this.prisma.recruiterActiveSearch.update({
+    return this.prisma.activeSearch.update({
       where: { id: searchId },
       data: dto,
     });
   }
 
   removeSearch(searchId: string) {
-    return this.prisma.recruiterActiveSearch.delete({ where: { id: searchId } });
+    return this.prisma.activeSearch.delete({
+      where: { id: searchId },
+    });
   }
 
   // ─── Insights ──────────────────────────────────────────

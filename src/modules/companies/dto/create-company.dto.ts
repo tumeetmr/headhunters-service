@@ -7,27 +7,35 @@ export class CreateCompanyDto {
   @IsString()
   name: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   slug?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   industry?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @IsUrl()
   website?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @IsUrl()
   logoUrl?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   size?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   location?: string;
 
-  @IsOptional() @IsUUID(undefined, { each: true })
+  @IsOptional()
+  @IsUUID(undefined, { each: true })
   skillIds?: string[];
 }

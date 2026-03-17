@@ -363,22 +363,41 @@ async function main() {
 
   const hashedPassword = await hash(DEFAULT_PASSWORD, 12);
 
-  // ── Collect and upsert all unique Skills ──────────────────
-  const allSkillNames = new Set<string>();
+  // ── Collect and upsert all unique Skill(type, value) ──────
+  const allSkills = new Map<string, { type: string; value: string }>();
+  const addSkill = (type: string, value?: string) => {
+    if (!value) return;
+    const normalized = value.trim();
+    if (!normalized.length) return;
+    allSkills.set(normalized.toLowerCase(), { type, value: normalized });
+  };
+
   for (const r of recruiters) {
-    r.skills?.forEach((s) => allSkillNames.add(s));
+    r.skills?.forEach((v) => addSkill('SKILL', v));
+    r.sectors?.forEach((v) => addSkill('INDUSTRY', v));
+    r.specialties?.forEach((v) => addSkill('EXPERTISE', v));
+    r.languages?.forEach((v) => addSkill('LANGUAGE', v));
+    r.awards?.forEach((v) => addSkill('CERTIFICATION', v));
   }
 
-  for (const name of allSkillNames) {
+  for (const skill of allSkills.values()) {
     await prisma.skill.upsert({
-      where: { name },
-      update: {},
-      create: { name },
+      where: { value: skill.value },
+      update: { type: skill.type },
+      create: skill,
     });
   }
 
-  if (allSkillNames.size > 0) {
-    console.log(`✓ Upserted ${allSkillNames.size} skills`);
+  if (allSkills.size > 0) {
+    console.log(`✓ Upserted ${allSkills.size} skills`);
+  }
+
+  const skillsByValue = new Map<string, string>();
+  const persistedSkills = await prisma.skill.findMany({
+    select: { id: true, value: true },
+  });
+  for (const skill of persistedSkills) {
+    skillsByValue.set(skill.value.toLowerCase(), skill.id);
   }
 
   // ── Seed each recruiter ───────────────────────────────────
@@ -395,16 +414,7 @@ async function main() {
       },
     });
 
-    // 2. Resolve skills to connect
-    const skillConnections = r.skills
-      ? await Promise.all(
-          r.skills.map((name) =>
-            prisma.skill.findUnique({ where: { name } }),
-          ),
-        )
-      : [];
-
-    // 3. Create RecruiterProfile
+    // 2. Create RecruiterProfile
     const profile = await prisma.recruiterProfile.upsert({
       where: { userId: user.id },
       update: {},
@@ -419,16 +429,15 @@ async function main() {
         photoUrl: r.photoUrl ?? null,
         publicPhone: r.phone ?? null,
         isLeadPartner: (r.experience_years ?? 0) >= 15,
-        skills: {
-          connect: skillConnections
-            .filter(Boolean)
-            .map((s) => ({ id: s!.id })),
-        },
       },
     });
 
-    // 4. Create RecruiterTags (industry, expertise, language, certification)
+    // 3. Create Tags linked to Skill(type, value)
     const tags: { type: string; value: string; sortOrder: number }[] = [];
+
+    r.skills?.forEach((v, i) =>
+      tags.push({ type: 'SKILL', value: v, sortOrder: i }),
+    );
 
     r.sectors?.forEach((v, i) =>
       tags.push({ type: 'INDUSTRY', value: v, sortOrder: i }),
@@ -444,23 +453,28 @@ async function main() {
     );
 
     for (const tag of tags) {
-      await prisma.recruiterTag.upsert({
+      const skillId = skillsByValue.get(tag.value.toLowerCase());
+      if (!skillId) continue;
+
+      await prisma.tag.upsert({
         where: {
-          recruiterProfileId_type_value: {
+          recruiterProfileId_skillId: {
             recruiterProfileId: profile.id,
-            type: tag.type,
-            value: tag.value,
+            skillId,
           },
         },
-        update: {},
+        update: {
+          sortOrder: tag.sortOrder,
+        },
         create: {
           recruiterProfileId: profile.id,
-          ...tag,
+          skillId,
+          sortOrder: tag.sortOrder,
         },
       });
     }
 
-    // 5. Create RecruiterLinks (LinkedIn + Phone)
+    // 4. Create RecruiterLinks (LinkedIn + Phone)
     if (r.linkedin) {
       const url = r.linkedin.startsWith('http')
         ? r.linkedin
@@ -503,7 +517,7 @@ async function main() {
       });
     }
 
-    // 6. Create RecruiterInsights
+    // 5. Create RecruiterInsights
     if (r.insights) {
       for (let i = 0; i < r.insights.length; i++) {
         const insight = r.insights[i];
@@ -527,6 +541,157 @@ async function main() {
 
   console.log(`\n🎉 Seeded ${recruiters.length} recruiters successfully!`);
   console.log(`   Default password: ${DEFAULT_PASSWORD}`);
+
+  // ── Create Form Template ───────────────────────────────────
+  const formTemplate = await prisma.formTemplate.upsert({
+    where: { name: 'Recruiter Request Form - Mongolian' },
+    update: {},
+    create: {
+      name: 'Recruiter Request Form - Mongolian',
+      isActive: true,
+      fields: {
+        create: [
+          {
+            key: 'position_title',
+            label: 'Ямар албан тушаалийн захиалга өгч буй вэ?',
+            type: 'TEXT',
+            placeholder: 'Албан тушаалын нэрийг оруулна уу',
+            isRequired: true,
+            sortOrder: 0,
+          },
+          {
+            key: 'main_responsibilities',
+            label: 'Энэ үүргийн үндсэн хариуцлагууд юу вэ?',
+            type: 'TEXTAREA',
+            placeholder: 'Үндсэн хариуцлагуудыг дэлгэрүүлэн бичнэ үү',
+            isRequired: true,
+            sortOrder: 1,
+          },
+          {
+            key: 'required_skills',
+            label: 'Энэ албан тушаалд шаардагдах гол ур чадварууд болон шалгуур үзүүлэлтүүд юу вэ?',
+            type: 'TEXTAREA',
+            placeholder: 'Шаардагдах ур чадвар болон крайтерийг оруулна уу',
+            isRequired: true,
+            sortOrder: 2,
+          },
+          {
+            key: 'culture_fit',
+            label: 'Танай компанийн соёлд ямар хүн нийцэх вэ?',
+            type: 'TEXTAREA',
+            placeholder: 'Компаний соёлд нийцэх хүний шинж чанарыг бичнэ үү',
+            isRequired: true,
+            sortOrder: 3,
+          },
+          {
+            key: 'salary',
+            label: 'Тус албан тушаалийн цалин хэд вэ?',
+            type: 'TEXT',
+            placeholder: 'Цалины хэмжээг оруулна уу (жишээ: 2,000,000 - 3,000,000 ₮)',
+            isRequired: true,
+            sortOrder: 4,
+          },
+          {
+            key: 'benefits',
+            label: 'Нэмэлт бонус, benefit бий юу?',
+            type: 'TEXTAREA',
+            placeholder: 'Боломжтай бонус болон benefitуудыг бичнэ үү',
+            isRequired: false,
+            sortOrder: 5,
+          },
+          {
+            key: 'other_requirements',
+            label: 'Өөр шаардлага, хүсэлтүүд бий юу?',
+            type: 'TEXTAREA',
+            placeholder: 'Бусад шаардалгууд эсвэл хүсэлтүүдийг бичнэ үү',
+            isRequired: false,
+            sortOrder: 6,
+          },
+          {
+            key: 'feedback',
+            label: 'Lambda.Global холбоотой санал хүсэлтээ бидэнд илгээнэ үү.',
+            type: 'TEXTAREA',
+            placeholder: 'Манай үйлчилгээний талаар санал хүсэлтээ оруулна уу',
+            isRequired: false,
+            sortOrder: 7,
+          },
+        ],
+      },
+    },
+    include: { fields: true },
+  });
+
+  console.log(`✓ Created form template: "${formTemplate.name}" with ${formTemplate.fields.length} fields`);
+
+  // ── Seed Companies ─────────────────────────────────────────
+  const companiesData = [
+    {
+      name: 'Ondo LLC',
+      slug: 'ondo',
+      email: 'hr@ondo.mn',
+      industry: 'Technology & Innovation',
+      location: 'Ulaanbaatar',
+      website: 'https://www.ondo.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1ondo_logo',
+      description: 'Technolgy-focused company building the future.',
+      size: '500+',
+    },
+    {
+      name: 'Lambda Global',
+      slug: 'lambda-global',
+      email: 'careers@lambda.mn',
+      industry: 'Human Resources & Recruitment',
+      location: 'Ulaanbaatar',
+      website: 'https://www.lambda.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1lambda_logo',
+      description: 'Leading recruitment consultancy in Mongolia.',
+      size: '100+',
+    },
+  ];
+
+  const upsertedCompanies: typeof companiesData = [];
+  for (const companyData of companiesData) {
+    // Create or get user
+    const user = await prisma.user.upsert({
+      where: { email: companyData.email },
+      update: {},
+      create: {
+        email: companyData.email,
+        password: hashedPassword,
+        name: companyData.name,
+        role: 'COMPANY',
+      },
+    });
+
+    // Create or get company
+    const company = await prisma.company.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: {
+        userId: user.id,
+        name: companyData.name,
+        slug: companyData.slug,
+        industry: companyData.industry,
+        location: companyData.location,
+        website: companyData.website,
+        logoUrl: companyData.logoUrl,
+        description: companyData.description,
+        size: companyData.size,
+      },
+    });
+
+    upsertedCompanies.push(companyData);
+    console.log(`  ✓ ${companyData.name} (${companyData.slug})`);
+  }
+
+  console.log(`✓ Seeded ${upsertedCompanies.length} companies`);
+
+  console.log(`\n🎉 Seed complete!`);
+  console.log(`   ✓ ${recruiters.length} recruiters`);
+  console.log(`   ✓ ${upsertedCompanies.length} companies`);
+  console.log(`   ✓ 1 form template with ${formTemplate.fields?.length || 0} fields`);
+  console.log(`   Default password: ${DEFAULT_PASSWORD}`);
+
 }
 
 main()

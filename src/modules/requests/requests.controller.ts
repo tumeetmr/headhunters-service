@@ -1,9 +1,21 @@
 import {
-  Controller, Get, Post, Put, Delete,
-  Param, Body, Query, ParseUUIDPipe,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  ParseUUIDPipe,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { RequestsService } from './requests.service';
-import { CreateRequestDto, UpdateRequestStatusDto } from './dto/create-request.dto';
+import {
+  CreateRequestDto,
+  UpdateRequestStatusDto,
+} from './dto/create-request.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../../common/enums';
 
@@ -13,14 +25,17 @@ export class RequestsController {
 
   @Post()
   @Roles(Role.COMPANY, Role.ADMIN)
-  create(@Body() dto: CreateRequestDto) {
-    return this.requestsService.create(dto);
+  create(@Body() dto: CreateRequestDto, @Req() req: Request) {
+    const userId = (req.user as any)?.id;
+    return this.requestsService.create(dto, userId);
   }
 
   @Get()
   @Roles(Role.RECRUITER, Role.COMPANY, Role.ADMIN)
-  findAll(@Query('status') status?: string) {
-    return this.requestsService.findAll(status);
+  findAll(@Req() req: Request, @Query('status') status?: string) {
+    const userId = (req.user as any)?.id;
+    const userRole = (req.user as any)?.role;
+    return this.requestsService.findAll({ status, userId, userRole });
   }
 
   @Get(':id')

@@ -1,6 +1,12 @@
 import {
-  Controller, Get, Post, Put, Delete,
-  Param, Body, ParseUUIDPipe,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { SkillsService } from './skills.service';
 import { CreateSkillDto } from './dto/create-skill.dto';
@@ -14,7 +20,7 @@ export class SkillsController {
   constructor(private readonly skillsService: SkillsService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.RECRUITER, Role.COMPANY)
   create(@Body() dto: CreateSkillDto) {
     return this.skillsService.create(dto);
   }
@@ -33,10 +39,7 @@ export class SkillsController {
 
   @Put(':id')
   @Roles(Role.ADMIN)
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateSkillDto,
-  ) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateSkillDto) {
     return this.skillsService.update(id, dto);
   }
 

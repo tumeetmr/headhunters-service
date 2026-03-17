@@ -41,6 +41,7 @@ CREATE TABLE "RecruiterProfile" (
 CREATE TABLE "Company" (
     "id" UUID NOT NULL,
     "userId" UUID NOT NULL,
+    "formTemplateId" UUID,
     "name" TEXT NOT NULL,
     "slug" TEXT,
     "industry" TEXT,
@@ -58,7 +59,8 @@ CREATE TABLE "Company" (
 -- CreateTable
 CREATE TABLE "Skill" (
     "id" UUID NOT NULL,
-    "name" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -66,17 +68,17 @@ CREATE TABLE "Skill" (
 );
 
 -- CreateTable
-CREATE TABLE "RecruiterTag" (
+CREATE TABLE "Tag" (
     "id" UUID NOT NULL,
-    "recruiterProfileId" UUID NOT NULL,
-    "type" TEXT NOT NULL,
-    "value" TEXT NOT NULL,
+    "recruiterProfileId" UUID,
+    "companyId" UUID,
+    "skillId" UUID NOT NULL,
     "meta" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "RecruiterTag_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Tag_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -94,9 +96,10 @@ CREATE TABLE "RecruiterLink" (
 );
 
 -- CreateTable
-CREATE TABLE "RecruiterActiveSearch" (
+CREATE TABLE "ActiveSearch" (
     "id" UUID NOT NULL,
     "recruiterProfileId" UUID NOT NULL,
+    "companyId" UUID,
     "title" TEXT NOT NULL,
     "level" TEXT,
     "industry" TEXT,
@@ -107,7 +110,7 @@ CREATE TABLE "RecruiterActiveSearch" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "RecruiterActiveSearch_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ActiveSearch_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -180,22 +183,6 @@ CREATE TABLE "RequestAnswer" (
     CONSTRAINT "RequestAnswer_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "_RecruiterProfileToSkill" (
-    "A" UUID NOT NULL,
-    "B" UUID NOT NULL,
-
-    CONSTRAINT "_RecruiterProfileToSkill_AB_pkey" PRIMARY KEY ("A","B")
-);
-
--- CreateTable
-CREATE TABLE "_CompanyToSkill" (
-    "A" UUID NOT NULL,
-    "B" UUID NOT NULL,
-
-    CONSTRAINT "_CompanyToSkill_AB_pkey" PRIMARY KEY ("A","B")
-);
-
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -215,19 +202,37 @@ CREATE UNIQUE INDEX "Company_userId_key" ON "Company"("userId");
 CREATE UNIQUE INDEX "Company_slug_key" ON "Company"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Skill_name_key" ON "Skill"("name");
+CREATE UNIQUE INDEX "Skill_value_key" ON "Skill"("value");
 
 -- CreateIndex
-CREATE INDEX "RecruiterTag_recruiterProfileId_type_idx" ON "RecruiterTag"("recruiterProfileId", "type");
+CREATE INDEX "Skill_type_idx" ON "Skill"("type");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "RecruiterTag_recruiterProfileId_type_value_key" ON "RecruiterTag"("recruiterProfileId", "type", "value");
+CREATE UNIQUE INDEX "Skill_type_value_key" ON "Skill"("type", "value");
+
+-- CreateIndex
+CREATE INDEX "Tag_recruiterProfileId_sortOrder_idx" ON "Tag"("recruiterProfileId", "sortOrder");
+
+-- CreateIndex
+CREATE INDEX "Tag_companyId_sortOrder_idx" ON "Tag"("companyId", "sortOrder");
+
+-- CreateIndex
+CREATE INDEX "Tag_skillId_idx" ON "Tag"("skillId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Tag_recruiterProfileId_skillId_key" ON "Tag"("recruiterProfileId", "skillId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Tag_companyId_skillId_key" ON "Tag"("companyId", "skillId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RecruiterLink_recruiterProfileId_type_url_key" ON "RecruiterLink"("recruiterProfileId", "type", "url");
 
 -- CreateIndex
-CREATE INDEX "RecruiterActiveSearch_recruiterProfileId_status_idx" ON "RecruiterActiveSearch"("recruiterProfileId", "status");
+CREATE INDEX "ActiveSearch_recruiterProfileId_status_idx" ON "ActiveSearch"("recruiterProfileId", "status");
+
+-- CreateIndex
+CREATE INDEX "ActiveSearch_companyId_idx" ON "ActiveSearch"("companyId");
 
 -- CreateIndex
 CREATE INDEX "RecruiterInsight_recruiterProfileId_status_idx" ON "RecruiterInsight"("recruiterProfileId", "status");
@@ -253,12 +258,6 @@ CREATE INDEX "RecruitRequest_recruiterId_idx" ON "RecruitRequest"("recruiterId")
 -- CreateIndex
 CREATE UNIQUE INDEX "RequestAnswer_recruitRequestId_formFieldId_key" ON "RequestAnswer"("recruitRequestId", "formFieldId");
 
--- CreateIndex
-CREATE INDEX "_RecruiterProfileToSkill_B_index" ON "_RecruiterProfileToSkill"("B");
-
--- CreateIndex
-CREATE INDEX "_CompanyToSkill_B_index" ON "_CompanyToSkill"("B");
-
 -- AddForeignKey
 ALTER TABLE "RecruiterProfile" ADD CONSTRAINT "RecruiterProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -266,13 +265,25 @@ ALTER TABLE "RecruiterProfile" ADD CONSTRAINT "RecruiterProfile_userId_fkey" FOR
 ALTER TABLE "Company" ADD CONSTRAINT "Company_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RecruiterTag" ADD CONSTRAINT "RecruiterTag_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Company" ADD CONSTRAINT "Company_formTemplateId_fkey" FOREIGN KEY ("formTemplateId") REFERENCES "FormTemplate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Tag" ADD CONSTRAINT "Tag_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Tag" ADD CONSTRAINT "Tag_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Tag" ADD CONSTRAINT "Tag_skillId_fkey" FOREIGN KEY ("skillId") REFERENCES "Skill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "RecruiterLink" ADD CONSTRAINT "RecruiterLink_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RecruiterActiveSearch" ADD CONSTRAINT "RecruiterActiveSearch_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ActiveSearch" ADD CONSTRAINT "ActiveSearch_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ActiveSearch" ADD CONSTRAINT "ActiveSearch_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "RecruiterInsight" ADD CONSTRAINT "RecruiterInsight_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -294,15 +305,3 @@ ALTER TABLE "RequestAnswer" ADD CONSTRAINT "RequestAnswer_recruitRequestId_fkey"
 
 -- AddForeignKey
 ALTER TABLE "RequestAnswer" ADD CONSTRAINT "RequestAnswer_formFieldId_fkey" FOREIGN KEY ("formFieldId") REFERENCES "FormField"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_RecruiterProfileToSkill" ADD CONSTRAINT "_RecruiterProfileToSkill_A_fkey" FOREIGN KEY ("A") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_RecruiterProfileToSkill" ADD CONSTRAINT "_RecruiterProfileToSkill_B_fkey" FOREIGN KEY ("B") REFERENCES "Skill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_CompanyToSkill" ADD CONSTRAINT "_CompanyToSkill_A_fkey" FOREIGN KEY ("A") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "_CompanyToSkill" ADD CONSTRAINT "_CompanyToSkill_B_fkey" FOREIGN KEY ("B") REFERENCES "Skill"("id") ON DELETE CASCADE ON UPDATE CASCADE;

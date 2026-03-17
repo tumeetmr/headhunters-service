@@ -57,13 +57,32 @@ export class AuthService {
         name: true,
         role: true,
         createdAt: true,
-        recruiterProfile: true,
-        company: true,
+        recruiterProfile: {
+          include: {
+            tags: {
+              include: { skill: true },
+            },
+            insights: true,
+            links: true,
+            activeSearches: true,
+          },
+        },
+        company: {
+          include: {
+            tags: {
+              include: { skill: true },
+            },
+          },
+        },
       },
     });
   }
 
-  private buildTokenResponse(user: { id: string; email: string; role: string }) {
+  private buildTokenResponse(user: {
+    id: string;
+    email: string;
+    role: string;
+  }) {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,

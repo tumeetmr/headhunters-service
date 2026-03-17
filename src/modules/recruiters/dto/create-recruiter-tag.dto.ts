@@ -1,16 +1,15 @@
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { RecruiterTagType } from '../../../common/enums';
+import { IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class CreateRecruiterTagDto {
-  @IsEnum(RecruiterTagType)
-  type: RecruiterTagType;
+  @IsUUID()
+  skillId: string;
 
+  @IsOptional()
   @IsString()
-  value: string;
-
-  @IsOptional() @IsString()
   meta?: string;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   sortOrder?: number;
 }

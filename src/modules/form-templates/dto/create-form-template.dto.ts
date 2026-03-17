@@ -1,6 +1,12 @@
 import {
-  IsArray, IsBoolean, IsEnum, IsInt, IsOptional,
-  IsString, Min, ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { FormFieldType } from '../../../common/enums';
@@ -12,19 +18,25 @@ export class CreateFormFieldDto {
   @IsString()
   label: string;
 
-  @IsOptional() @IsEnum(FormFieldType)
+  @IsOptional()
+  @IsEnum(FormFieldType)
   type?: FormFieldType;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   placeholder?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   options?: string;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isRequired?: boolean;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   sortOrder?: number;
 }
 
@@ -32,7 +44,8 @@ export class CreateFormTemplateDto {
   @IsString()
   name: string;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 
   @IsOptional()
@@ -43,9 +56,11 @@ export class CreateFormTemplateDto {
 }
 
 export class UpdateFormTemplateDto {
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   name?: string;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }

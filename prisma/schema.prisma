@@ -7,22 +7,22 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(uuid()) @db.Uuid
-  email            String            @unique
-  password         String
-  name             String
-  role             String
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  password  String
+  name      String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   recruiterProfile RecruiterProfile?
   company          Company?
 }
 
 model RecruiterProfile {
-  id              String  @id @default(uuid()) @db.Uuid
-  userId          String  @unique @db.Uuid
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Public identity
   slug            String? @unique
@@ -42,17 +42,16 @@ model RecruiterProfile {
   timezone    String?
 
   // Meta
-  rating      Float    @default(0)
-  visibility  String   @default("DRAFT")
+  rating      Float     @default(0)
+  visibility  String    @default("DRAFT")
   publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
-  skills         Skill[]
-  tags           RecruiterTag[]
+  tags           Tag[]
   links          RecruiterLink[]
-  activeSearches RecruiterActiveSearch[]
+  activeSearches ActiveSearch[]
   insights       RecruiterInsight[]
   requests       RecruitRequest[]
 
@@ -60,94 +59,105 @@ model RecruiterProfile {
 }
 
 model Company {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @unique @db.Uuid
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  slug        String?  @unique
-  industry    String?
-  website     String?
-  logoUrl     String?
-  description String?
-  size        String?
-  location    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  slug             String?   @unique
+  industry         String?
+  website          String?
+  logoUrl          String?
+  description      String?
+  size             String?
+  location         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  skills   Skill[]
-  requests RecruitRequest[]
+  tags           Tag[]
+  requests       RecruitRequest[]
+  activeSearches ActiveSearch[]
 }
 
 model Skill {
   id        String   @id @default(uuid()) @db.Uuid
-  name      String   @unique
+  type      String
+  value     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  recruiters RecruiterProfile[]
-  companies  Company[]
+  tags Tag[]
+
+  @@unique([type, value])
+  @@index([type])
 }
 
-model RecruiterTag {
-  id                 String   @id @default(uuid()) @db.Uuid
-  recruiterProfileId String   @db.Uuid
-  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
-  type               String
-  value              String
+model Tag {
+  id                 String            @id @default(uuid()) @db.Uuid
+  recruiterProfileId String?           @db.Uuid
+  recruiterProfile   RecruiterProfile? @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  companyId          String?           @db.Uuid
+  company            Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  skillId            String            @db.Uuid
+  skill              Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
   meta               String?
-  sortOrder          Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  sortOrder          Int               @default(0)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
-  @@unique([recruiterProfileId, type, value])
-  @@index([recruiterProfileId, type])
+  @@unique([recruiterProfileId, skillId])
+  @@unique([companyId, skillId])
+  @@index([recruiterProfileId, sortOrder])
+  @@index([companyId, sortOrder])
+  @@index([skillId])
 }
 
 model RecruiterLink {
-  id                 String   @id @default(uuid()) @db.Uuid
-  recruiterProfileId String   @db.Uuid
+  id                 String           @id @default(uuid()) @db.Uuid
+  recruiterProfileId String           @db.Uuid
   recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
   type               String
   label              String?
   url                String
-  sortOrder          Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  sortOrder          Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@unique([recruiterProfileId, type, url])
 }
 
-model RecruiterActiveSearch {
-  id                 String   @id @default(uuid()) @db.Uuid
-  recruiterProfileId String   @db.Uuid
+model ActiveSearch {
+  id                 String           @id @default(uuid()) @db.Uuid
+  recruiterProfileId String           @db.Uuid
   recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  companyId          String?          @db.Uuid
+  company            Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
   title              String
   level              String?
   industry           String?
   location           String?
   summary            String?
-  status             String   @default("ACTIVE")
-  sortOrder          Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  status             String           @default("ACTIVE")
+  sortOrder          Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([recruiterProfileId, status])
+  @@index([companyId])
 }
 
-
 model RecruiterInsight {
-  id                 String   @id @default(uuid()) @db.Uuid
-  recruiterProfileId String   @db.Uuid
+  id                 String           @id @default(uuid()) @db.Uuid
+  recruiterProfileId String           @db.Uuid
   recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
   title              String
   description        String?
   mediaUrl           String?
   thumbnailUrl       String?
-  status             String   @default("DRAFT")
-  sortOrder          Int      @default(0)
+  status             String           @default("DRAFT")
+  sortOrder          Int              @default(0)
   publishedAt        DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([recruiterProfileId, status])
 }
@@ -164,18 +174,18 @@ model FormTemplate {
 }
 
 model FormField {
-  id             String   @id @default(uuid()) @db.Uuid
-  formTemplateId String   @db.Uuid
+  id             String       @id @default(uuid()) @db.Uuid
+  formTemplateId String       @db.Uuid
   formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
   key            String
   label          String
-  type           String   @default("TEXT")
+  type           String       @default("TEXT")
   placeholder    String?
   options        String?
-  isRequired     Boolean  @default(false)
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isRequired     Boolean      @default(false)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   answers RequestAnswer[]
 
@@ -184,16 +194,16 @@ model FormField {
 }
 
 model RecruitRequest {
-  id             String   @id @default(uuid()) @db.Uuid
-  formTemplateId String   @db.Uuid
-  formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id])
-  companyId      String?  @db.Uuid
-  company        Company?         @relation(fields: [companyId], references: [id])
-  recruiterId    String?  @db.Uuid
+  id             String            @id @default(uuid()) @db.Uuid
+  formTemplateId String            @db.Uuid
+  formTemplate   FormTemplate      @relation(fields: [formTemplateId], references: [id])
+  companyId      String?           @db.Uuid
+  company        Company?          @relation(fields: [companyId], references: [id])
+  recruiterId    String?           @db.Uuid
   recruiter      RecruiterProfile? @relation(fields: [recruiterId], references: [id])
-  status         String   @default("PENDING")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  status         String            @default("PENDING")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   answers RequestAnswer[]
 
@@ -203,14 +213,14 @@ model RecruitRequest {
 }
 
 model RequestAnswer {
-  id               String   @id @default(uuid()) @db.Uuid
-  recruitRequestId String   @db.Uuid
+  id               String         @id @default(uuid()) @db.Uuid
+  recruitRequestId String         @db.Uuid
   recruitRequest   RecruitRequest @relation(fields: [recruitRequestId], references: [id], onDelete: Cascade)
-  formFieldId      String   @db.Uuid
-  formField        FormField @relation(fields: [formFieldId], references: [id])
+  formFieldId      String         @db.Uuid
+  formField        FormField      @relation(fields: [formFieldId], references: [id])
   value            String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@unique([recruitRequestId, formFieldId])
 }

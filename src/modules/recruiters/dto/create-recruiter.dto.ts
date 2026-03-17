@@ -1,6 +1,13 @@
 import {
-  IsBoolean, IsEnum, IsInt, IsNumber, IsOptional,
-  IsString, IsUUID, IsUrl, Min,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsUrl,
+  Min,
 } from 'class-validator';
 import { ProfileVisibility } from '../../../common/enums';
 
@@ -8,51 +15,68 @@ export class CreateRecruiterProfileDto {
   @IsUUID()
   userId: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   slug?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   title?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   tagline?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   bio?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @IsUrl()
   photoUrl?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @IsUrl()
   heroImageUrl?: string;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   yearsExperience?: number;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isLeadPartner?: boolean;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   partnerBadge?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   publicEmail?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   publicPhone?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   location?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   timezone?: string;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   rating?: number;
 
-  @IsOptional() @IsEnum(ProfileVisibility)
+  @IsOptional()
+  @IsEnum(ProfileVisibility)
   visibility?: ProfileVisibility;
 
-  @IsOptional() @IsUUID(undefined, { each: true })
+  @IsOptional()
+  @IsUUID(undefined, { each: true })
   skillIds?: string[];
 }

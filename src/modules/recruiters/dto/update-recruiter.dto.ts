@@ -1,55 +1,114 @@
 import {
-  IsBoolean, IsEnum, IsInt, IsNumber, IsOptional,
-  IsString, IsUUID, IsUrl, Min,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsUrl,
+  Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ProfileVisibility } from '../../../common/enums';
 
+const emptyStringToUndefined = ({ value }: { value: unknown }) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? undefined : trimmed;
+  }
+  return value;
+};
+
+const numericStringToNumber = ({ value }: { value: unknown }) => {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed.length) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isNaN(parsed) ? value : parsed;
+  }
+  return value;
+};
+
 export class UpdateRecruiterProfileDto {
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   slug?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   title?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   tagline?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   bio?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsUrl()
   photoUrl?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsUrl()
   heroImageUrl?: string;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @Transform(numericStringToNumber)
+  @IsInt()
+  @Min(0)
   yearsExperience?: number;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isLeadPartner?: boolean;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   partnerBadge?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   publicEmail?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   publicPhone?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   location?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   timezone?: string;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @Transform(numericStringToNumber)
+  @IsNumber()
   rating?: number;
 
-  @IsOptional() @IsEnum(ProfileVisibility)
+  @IsOptional()
+  @IsEnum(ProfileVisibility)
   visibility?: ProfileVisibility;
 
-  @IsOptional() @IsUUID(undefined, { each: true })
+  @IsOptional()
+  @IsUUID(undefined, { each: true })
   skillIds?: string[];
 }

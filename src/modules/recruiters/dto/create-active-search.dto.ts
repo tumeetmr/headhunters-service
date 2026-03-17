@@ -1,25 +1,43 @@
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 import { ActiveSearchStatus } from '../../../common/enums';
 
 export class CreateActiveSearchDto {
+  @IsOptional()
+  @IsUUID()
+  companyId?: string;
+
   @IsString()
   title: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   level?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   industry?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   location?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   summary?: string;
 
-  @IsOptional() @IsEnum(ActiveSearchStatus)
+  @IsOptional()
+  @IsEnum(ActiveSearchStatus)
   status?: ActiveSearchStatus;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   sortOrder?: number;
 }

@@ -3,7 +3,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 
-const COMPANY_INCLUDE = { skills: true, user: true };
+const COMPANY_INCLUDE = {
+  tags: {
+    include: { skill: true },
+    orderBy: { sortOrder: 'asc' as const },
+  },
+  user: true,
+};
 
 @Injectable()
 export class CompaniesService {
@@ -14,8 +20,16 @@ export class CompaniesService {
     return this.prisma.company.create({
       data: {
         ...data,
-        skills: skillIds?.length
-          ? { connect: skillIds.map((id) => ({ id })) }
+        tags: skillIds?.length
+          ? {
+              createMany: {
+                data: skillIds.map((skillId, index) => ({
+                  skillId,
+                  sortOrder: index,
+                })),
+                skipDuplicates: true,
+              },
+            }
           : undefined,
       },
       include: COMPANY_INCLUDE,
@@ -43,7 +57,8 @@ export class CompaniesService {
       where: { slug },
       include: COMPANY_INCLUDE,
     });
-    if (!company) throw new NotFoundException(`Company slug "${slug}" not found`);
+    if (!company)
+      throw new NotFoundException(`Company slug "${slug}" not found`);
     return company;
   }
 
@@ -54,12 +69,33 @@ export class CompaniesService {
       where: { id },
       data: {
         ...data,
-        skills: skillIds
-          ? { set: skillIds.map((sid) => ({ id: sid })) }
-          : undefined,
+        ...(skillIds
+          ? {
+              tags: {
+                deleteMany: {},
+                createMany: {
+                  data: skillIds.map((skillId, index) => ({
+                    skillId,
+                    sortOrder: index,
+                  })),
+                  skipDuplicates: true,
+                },
+              },
+            }
+          : {}),
       },
       include: COMPANY_INCLUDE,
     });
+  }
+
+  async updateByUserId(userId: string, dto: UpdateCompanyDto) {
+    const company = await this.prisma.company.findUnique({
+      where: { userId },
+    });
+    if (!company)
+      throw new NotFoundException(`Company for user ${userId} not found`);
+
+    return this.update(company.id, dto);
   }
 
   async remove(id: string) {

@@ -1,5 +1,9 @@
 import {
-  IsArray, IsEnum, IsOptional, IsString, IsUUID,
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -10,18 +14,13 @@ export class AnswerDto {
   formFieldId: string;
 
   @IsString()
+  @IsNotEmpty()
   value: string;
 }
 
 export class CreateRequestDto {
   @IsUUID()
-  formTemplateId: string;
-
-  @IsOptional() @IsUUID()
-  companyId?: string;
-
-  @IsOptional() @IsUUID()
-  recruiterId?: string;
+  recruiterId: string;
 
   @IsArray()
   @ValidateNested({ each: true })

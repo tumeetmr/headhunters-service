@@ -22,7 +22,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('me')
+  @Get('')
   getProfile(@CurrentUser('id') userId: string) {
     return this.authService.getProfile(userId);
   }

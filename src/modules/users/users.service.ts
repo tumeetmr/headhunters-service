@@ -26,6 +26,10 @@ export class UsersService {
     return user;
   }
 
+  getUserWithProfile(id: string) {
+    return this.findOne(id);
+  }
+
   async update(id: string, dto: UpdateUserDto) {
     await this.findOne(id);
     return this.prisma.user.update({ where: { id }, data: dto });

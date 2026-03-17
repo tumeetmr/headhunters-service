@@ -16,15 +16,6 @@ export enum ProfileVisibility {
   ARCHIVED = 'ARCHIVED',
 }
 
-export enum RecruiterTagType {
-  EXPERTISE = 'EXPERTISE',
-  INDUSTRY = 'INDUSTRY',
-  FOCUS_ROLE = 'FOCUS_ROLE',
-  LANGUAGE = 'LANGUAGE',
-  CERTIFICATION = 'CERTIFICATION',
-  TOOL = 'TOOL',
-}
-
 export enum LinkType {
   EMAIL = 'EMAIL',
   PHONE = 'PHONE',
@@ -47,6 +38,14 @@ export enum InsightStatus {
   PUBLISHED = 'PUBLISHED',
   COMING_SOON = 'COMING_SOON',
   ARCHIVED = 'ARCHIVED',
+}
+
+export enum SkillType {
+  SKILL = 'SKILL',
+  INDUSTRY = 'INDUSTRY',
+  EXPERTISE = 'EXPERTISE',
+  LANGUAGE = 'LANGUAGE',
+  CERTIFICATION = 'CERTIFICATION',
 }
 
 // ─── Form Fields ─────────────────────────────────────────

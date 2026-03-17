@@ -7,18 +7,42 @@ import { UpdateSkillDto } from './dto/update-skill.dto';
 export class SkillsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateSkillDto) {
-    return this.prisma.skill.create({ data: dto });
+  async create(dto: CreateSkillDto) {
+    const value = dto.value.trim();
+
+    const existingSkill = await this.prisma.skill.findUnique({
+      where: { value },
+    });
+
+    if (existingSkill) {
+      return existingSkill;
+    }
+
+    return this.prisma.skill.create({
+      data: {
+        ...dto,
+        value,
+      },
+    });
   }
 
   findAll() {
-    return this.prisma.skill.findMany({ orderBy: { name: 'asc' } });
+    return this.prisma.skill.findMany({
+      orderBy: [{ type: 'asc' }, { value: 'asc' }],
+    });
   }
 
   async findOne(id: string) {
     const skill = await this.prisma.skill.findUnique({
       where: { id },
-      include: { recruiters: true, companies: true },
+      include: {
+        tags: {
+          include: {
+            recruiterProfile: true,
+            company: true,
+          },
+        },
+      },
     });
     if (!skill) throw new NotFoundException(`Skill ${id} not found`);
     return skill;

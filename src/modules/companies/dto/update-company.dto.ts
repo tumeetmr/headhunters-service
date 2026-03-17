@@ -1,30 +1,56 @@
 import { IsOptional, IsString, IsUUID, IsUrl } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+const emptyStringToUndefined = ({ value }: { value: unknown }) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? undefined : trimmed;
+  }
+  return value;
+};
 
 export class UpdateCompanyDto {
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   name?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   slug?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   industry?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsUrl()
   website?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsUrl()
   logoUrl?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   description?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   size?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @Transform(emptyStringToUndefined)
+  @IsString()
   location?: string;
 
-  @IsOptional() @IsUUID(undefined, { each: true })
+  @IsOptional()
+  @IsUUID(undefined, { each: true })
   skillIds?: string[];
 }

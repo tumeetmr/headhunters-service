@@ -1,22 +1,35 @@
-import { IsEnum, IsInt, IsOptional, IsString, IsUrl, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+} from 'class-validator';
 import { InsightStatus } from '../../../common/enums';
 
 export class CreateInsightDto {
   @IsString()
   title: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @IsUrl()
   mediaUrl?: string;
 
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @IsUrl()
   thumbnailUrl?: string;
 
-  @IsOptional() @IsEnum(InsightStatus)
+  @IsOptional()
+  @IsEnum(InsightStatus)
   status?: InsightStatus;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   sortOrder?: number;
 }
