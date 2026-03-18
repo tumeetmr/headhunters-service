@@ -15,6 +15,7 @@ const PROFILE_INCLUDE = {
   links: { orderBy: { sortOrder: 'asc' as const } },
   activeSearches: { orderBy: { sortOrder: 'asc' as const } },
   insights: { orderBy: { sortOrder: 'asc' as const } },
+  user: true,
 };
 
 @Injectable()
@@ -44,9 +45,19 @@ export class RecruitersService {
     });
   }
 
-  findAll(visibility?: string) {
+  findAll(visibility?: string, isLeadPartner?: boolean) {
+    const where: any = {};
+    
+    if (visibility) {
+      where.visibility = visibility;
+    }
+    
+    if (isLeadPartner !== undefined) {
+      where.isLeadPartner = isLeadPartner;
+    }
+
     return this.prisma.recruiterProfile.findMany({
-      where: visibility ? { visibility } : undefined,
+      where: Object.keys(where).length > 0 ? where : undefined,
       include: PROFILE_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
@@ -117,14 +128,14 @@ export class RecruitersService {
   // ─── Tags ──────────────────────────────────────────────
 
   addTag(profileId: string, dto: CreateRecruiterTagDto) {
-    return this.prisma.tag.create({
+    return this.prisma.recruiterTag.create({
       data: { recruiterProfileId: profileId, ...dto },
       include: { skill: true },
     });
   }
 
   removeTag(tagId: string) {
-    return this.prisma.tag.delete({ where: { id: tagId } });
+    return this.prisma.recruiterTag.delete({ where: { id: tagId } });
   }
 
   // ─── Links ─────────────────────────────────────────────
@@ -161,6 +172,47 @@ export class RecruitersService {
   }
 
   // ─── Insights ──────────────────────────────────────────
+
+  async getPlatformInsights() {
+    const [
+      recruitersCount,
+      activeSearchesCount,
+      countriesCount,
+      skillsCount,
+    ] = await Promise.all([
+      this.prisma.recruiterProfile.count({ where: { visibility: 'PUBLISHED' } }),
+      this.prisma.activeSearch.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.recruiterProfile.findMany({
+        distinct: ['location'],
+        select: { location: true },
+        where: { visibility: 'PUBLISHED', location: { not: null } },
+      }),
+      this.prisma.recruiterTag.count(),
+    ]);
+
+    return [
+      {
+        icon: 'star',
+        value: '4.9',
+        label: 'Avg. client ratings in Development & IT',
+      },
+      {
+        icon: 'clipboard',
+        value: `${recruitersCount}+`,
+        label: 'Published recruiters on platform',
+      },
+      {
+        icon: 'globe',
+        value: `${countriesCount.length}+`,
+        label: 'Countries represented',
+      },
+      {
+        icon: 'brain',
+        value: `${skillsCount}+`,
+        label: 'Skills and specialties',
+      },
+    ];
+  }
 
   addInsight(profileId: string, dto: CreateInsightDto) {
     return this.prisma.recruiterInsight.create({

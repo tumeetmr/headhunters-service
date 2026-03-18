@@ -41,6 +41,8 @@ export class AuthService {
       where: { email: dto.email },
     });
     if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user.password)
+      throw new UnauthorizedException('Password login is not available');
 
     const passwordValid = await bcrypt.compare(dto.password, user.password);
     if (!passwordValid) throw new UnauthorizedException('Invalid credentials');

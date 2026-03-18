@@ -36,9 +36,13 @@ export class SkillsService {
     const skill = await this.prisma.skill.findUnique({
       where: { id },
       include: {
-        tags: {
+        recruiterTags: {
           include: {
             recruiterProfile: true,
+          },
+        },
+        companyTags: {
+          include: {
             company: true,
           },
         },
