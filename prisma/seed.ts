@@ -925,11 +925,162 @@ async function main() {
     console.log(`✓ Assigned Starter plan to all companies`);
   }
 
+  // ── Seed Mock Job Openings (for frontend testing) ───────────────────────
+  const mockJobOpenings = [
+    {
+      companySlug: 'lambda-global',
+      title: 'Senior Full Stack Engineer',
+      description:
+        'Build and scale core marketplace features for recruiter-company workflows, messaging, and analytics dashboards.',
+      department: 'Engineering',
+      location: 'Remote',
+      employmentType: 'FULL_TIME',
+      salaryMin: 8000000,
+      salaryMax: 12000000,
+      salaryCurrency: 'MNT',
+      seniorityLevel: 'SENIOR',
+      experienceYears: 5,
+      feeType: 'PERCENTAGE',
+      feePercentage: 12,
+      feeFixed: null,
+      status: 'OPEN',
+      skills: ['TypeScript', 'NestJS', 'PostgreSQL', 'React'],
+    },
+    {
+      companySlug: 'oyu-tolgoi',
+      title: 'HR Operations Specialist',
+      description:
+        'Own recruitment operations, interview coordination, onboarding process quality, and stakeholder reporting.',
+      department: 'Human Resources',
+      location: 'Ulaanbaatar',
+      employmentType: 'FULL_TIME',
+      salaryMin: 3500000,
+      salaryMax: 5500000,
+      salaryCurrency: 'MNT',
+      seniorityLevel: 'MID',
+      experienceYears: 3,
+      feeType: 'FIXED',
+      feePercentage: null,
+      feeFixed: 2000000,
+      status: 'OPEN',
+      skills: ['Recruitment', 'Excel', 'Stakeholder Management', 'HRIS'],
+    },
+    {
+      companySlug: 'mobicom',
+      title: 'Part-time Content & Social Coordinator',
+      description:
+        'Create bilingual social content calendars, coordinate campaigns, and support employer branding initiatives.',
+      department: 'Marketing',
+      location: 'Ulaanbaatar',
+      employmentType: 'PART_TIME',
+      salaryMin: 1800000,
+      salaryMax: 2800000,
+      salaryCurrency: 'MNT',
+      seniorityLevel: 'JUNIOR',
+      experienceYears: 1,
+      feeType: 'PERCENTAGE',
+      feePercentage: 10,
+      feeFixed: null,
+      status: 'OPEN',
+      skills: ['Content Strategy', 'Canva', 'Copywriting', 'Social Media'],
+    },
+  ] as const;
+
+  let seededJobCount = 0;
+  for (const job of mockJobOpenings) {
+    const company = await prisma.company.findUnique({
+      where: { slug: job.companySlug },
+      select: { id: true },
+    });
+
+    if (!company) {
+      console.warn(`  ⚠ Skipped job "${job.title}" because company slug "${job.companySlug}" was not found`);
+      continue;
+    }
+
+    const skillIds: string[] = [];
+    for (const skillName of job.skills) {
+      const skill = await prisma.skill.upsert({
+        where: { value: skillName },
+        update: { type: 'SKILL' },
+        create: { type: 'SKILL', value: skillName },
+        select: { id: true },
+      });
+      skillIds.push(skill.id);
+    }
+
+    const existingJob = await prisma.jobOpening.findFirst({
+      where: {
+        companyId: company.id,
+        title: job.title,
+      },
+      select: { id: true },
+    });
+
+    if (existingJob) {
+      await prisma.jobOpening.update({
+        where: { id: existingJob.id },
+        data: {
+          description: job.description,
+          department: job.department,
+          location: job.location,
+          employmentType: job.employmentType,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          salaryCurrency: job.salaryCurrency,
+          seniorityLevel: job.seniorityLevel,
+          experienceYears: job.experienceYears,
+          feeType: job.feeType,
+          feePercentage: job.feePercentage,
+          feeFixed: job.feeFixed,
+          status: job.status,
+          skills: {
+            deleteMany: {},
+            create: skillIds.map((skillId) => ({
+              skill: { connect: { id: skillId } },
+            })),
+          },
+        },
+      });
+    } else {
+      await prisma.jobOpening.create({
+        data: {
+          companyId: company.id,
+          title: job.title,
+          description: job.description,
+          department: job.department,
+          location: job.location,
+          employmentType: job.employmentType,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          salaryCurrency: job.salaryCurrency,
+          seniorityLevel: job.seniorityLevel,
+          experienceYears: job.experienceYears,
+          feeType: job.feeType,
+          feePercentage: job.feePercentage,
+          feeFixed: job.feeFixed,
+          status: job.status,
+          skills: {
+            create: skillIds.map((skillId) => ({
+              skill: { connect: { id: skillId } },
+            })),
+          },
+        },
+      });
+    }
+
+    seededJobCount += 1;
+    console.log(`  ✓ Mock job: ${job.title} (${job.companySlug})`);
+  }
+
+  console.log(`✓ Seeded ${seededJobCount} mock job openings`);
+
   console.log(`\n🎉 Seed complete!`);
   console.log(`   ✓ ${recruiters.length} recruiters`);
   console.log(`   ✓ ${upsertedCompanies.length} companies`);
   console.log(`   ✓ 1 form template with ${formTemplate.fields?.length || 0} fields`);
   console.log(`   ✓ ${subscriptionPlansData.length} subscription plans`);
+  console.log(`   ✓ ${mockJobOpenings.length} mock job openings`);
   console.log(`   Default password: ${DEFAULT_PASSWORD}`);
 
 }
