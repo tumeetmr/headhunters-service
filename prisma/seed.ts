@@ -456,7 +456,7 @@ async function main() {
       const skillId = skillsByValue.get(tag.value.toLowerCase());
       if (!skillId) continue;
 
-      await prisma.tag.upsert({
+      await prisma.recruiterTag.upsert({
         where: {
           recruiterProfileId_skillId: {
             recruiterProfileId: profile.id,
@@ -623,6 +623,110 @@ async function main() {
 
   console.log(`✓ Created form template: "${formTemplate.name}" with ${formTemplate.fields.length} fields`);
 
+  // ── Seed Subscription Plans ────────────────────────────────
+  const subscriptionPlansData = [
+    {
+      name: 'STARTER',
+      description: 'Perfect for getting started with Lambda',
+      price: 0,
+      currency: 'MNT',
+      interval: 'MONTHLY',
+      features: {
+        max_active_projects: 1,
+        max_proposals_viewable: 5,
+        can_direct_message: false,
+        can_shortlist: false,
+        can_post_recruit_request: false,
+        featured_projects: 0,
+        dedicated_account_manager: false,
+        analytics_access: false,
+      },
+      isActive: true,
+    },
+    {
+      name: 'PROFESSIONAL',
+      description: 'For companies actively hiring',
+      price: 49900,
+      currency: 'MNT',
+      interval: 'MONTHLY',
+      features: {
+        max_active_projects: 3,
+        max_proposals_viewable: 25,
+        can_direct_message: true,
+        can_shortlist: true,
+        can_post_recruit_request: true,
+        featured_projects: 1,
+        dedicated_account_manager: false,
+        analytics_access: true,
+      },
+      isActive: true,
+    },
+    {
+      name: 'GROWTH',
+      description: 'For growing companies looking to scale hiring',
+      price: 99900,
+      currency: 'MNT',
+      interval: 'MONTHLY',
+      features: {
+        max_active_projects: 10,
+        max_proposals_viewable: -1,
+        can_direct_message: true,
+        can_shortlist: true,
+        can_post_recruit_request: true,
+        featured_projects: 3,
+        dedicated_account_manager: false,
+        analytics_access: true,
+      },
+      isActive: true,
+    },
+    {
+      name: 'BUSINESS',
+      description: 'For established organizations with ongoing needs',
+      price: 199900,
+      currency: 'MNT',
+      interval: 'MONTHLY',
+      features: {
+        max_active_projects: 25,
+        max_proposals_viewable: -1,
+        can_direct_message: true,
+        can_shortlist: true,
+        can_post_recruit_request: true,
+        featured_projects: 5,
+        dedicated_account_manager: true,
+        analytics_access: true,
+      },
+      isActive: true,
+    },
+    {
+      name: 'ENTERPRISE',
+      description: 'For large organizations with advanced needs',
+      price: 499900,
+      currency: 'MNT',
+      interval: 'MONTHLY',
+      features: {
+        max_active_projects: -1,
+        max_proposals_viewable: -1,
+        can_direct_message: true,
+        can_shortlist: true,
+        can_post_recruit_request: true,
+        featured_projects: 15,
+        dedicated_account_manager: true,
+        analytics_access: true,
+      },
+      isActive: true,
+    },
+  ];
+
+  for (const planData of subscriptionPlansData) {
+    await prisma.subscriptionPlan.upsert({
+      where: { name: planData.name },
+      update: { features: planData.features },
+      create: planData,
+    });
+  }
+
+  console.log(`✓ Seeded ${subscriptionPlansData.length} subscription plans`);
+
   // ── Seed Companies ─────────────────────────────────────────
   const companiesData = [
     {
@@ -633,7 +737,7 @@ async function main() {
       location: 'Ulaanbaatar',
       website: 'https://www.ondo.mn',
       logoUrl: 'https://drive.google.com/uc?export=view&id=1ondo_logo',
-      description: 'Technolgy-focused company building the future.',
+      description: 'Technology-focused company building the future.',
       size: '500+',
     },
     {
@@ -646,6 +750,116 @@ async function main() {
       logoUrl: 'https://drive.google.com/uc?export=view&id=1lambda_logo',
       description: 'Leading recruitment consultancy in Mongolia.',
       size: '100+',
+    },
+    {
+      name: 'Oyu Tolgoi LLC',
+      slug: 'oyu-tolgoi',
+      email: 'careers@ot.mn',
+      industry: 'Mining & Resources',
+      location: 'South Gobi',
+      website: 'https://www.oyutolgoi.com',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1ot_logo',
+      description: 'One of the world\'s largest copper mining projects.',
+      size: '2000+',
+    },
+    {
+      name: 'XAC Bank',
+      slug: 'xac-bank',
+      email: 'recruitment@xacbank.mn',
+      industry: 'Banking & Finance',
+      location: 'Ulaanbaatar',
+      website: 'https://www.xacbank.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1xac_logo',
+      description: 'Leading commercial bank in Mongolia.',
+      size: '1000+',
+    },
+    {
+      name: 'Enka Global Construction',
+      slug: 'enka-global',
+      email: 'hr@enka.mn',
+      industry: 'Construction & Engineering',
+      location: 'Ulaanbaatar',
+      website: 'https://www.enka.com',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1enka_logo',
+      description: 'International construction and engineering services.',
+      size: '1500+',
+    },
+    {
+      name: 'MobiCom Corporation',
+      slug: 'mobicom',
+      email: 'careers@mobicom.mn',
+      industry: 'Telecommunications',
+      location: 'Ulaanbaatar',
+      website: 'https://www.mobicom.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1mobicom_logo',
+      description: 'Mongolia\'s leading telecommunications provider.',
+      size: '2000+',
+    },
+    {
+      name: 'National University of Mongolia',
+      slug: 'num',
+      email: 'hr@num.edu.mn',
+      industry: 'Education',
+      location: 'Ulaanbaatar',
+      website: 'https://www.num.edu.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1num_logo',
+      description: 'Mongolia\'s premier higher education institution.',
+      size: '800+',
+    },
+    {
+      name: 'Temuulen Healthcare',
+      slug: 'temuulen-health',
+      email: 'careers@temuulen.mn',
+      industry: 'Healthcare & Medical',
+      location: 'Ulaanbaatar',
+      website: 'https://www.temuulen.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1temuulen_logo',
+      description: 'Leading private healthcare provider in Mongolia.',
+      size: '500+',
+    },
+    {
+      name: 'Gobi Cashmere',
+      slug: 'gobi-cashmere',
+      email: 'recruitment@gobicashmere.mn',
+      industry: 'Manufacturing & Textiles',
+      location: 'Gobi Region',
+      website: 'https://www.gobicashmere.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1gobi_logo',
+      description: 'Premium cashmere manufacturer serving global markets.',
+      size: '300+',
+    },
+    {
+      name: 'Peace Avenue Retail Group',
+      slug: 'peace-avenue',
+      email: 'hr@peaceavenue.mn',
+      industry: 'Retail & Commerce',
+      location: 'Ulaanbaatar',
+      website: 'https://www.peaceavenue.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1peace_logo',
+      description: 'Leading retail and shopping mall operator in Mongolia.',
+      size: '600+',
+    },
+    {
+      name: 'Mongolian Premier League (Football)',
+      slug: 'mpl-football',
+      email: 'admin@mpl.mn',
+      industry: 'Sports & Entertainment',
+      location: 'Ulaanbaatar',
+      website: 'https://www.mpl.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1mpl_logo',
+      description: 'Professional sports management and organization.',
+      size: '200+',
+    },
+    {
+      name: 'Eternal Energy Corp',
+      slug: 'eternal-energy',
+      email: 'careers@eternalenergy.mn',
+      industry: 'Renewable Energy',
+      location: 'Ulaanbaatar',
+      website: 'https://www.eternalenergy.mn',
+      logoUrl: 'https://drive.google.com/uc?export=view&id=1eternal_logo',
+      description: 'Leading renewable energy company in Central Asia.',
+      size: '400+',
     },
   ];
 
@@ -686,10 +900,187 @@ async function main() {
 
   console.log(`✓ Seeded ${upsertedCompanies.length} companies`);
 
+  // ── Assign Starter plan to companies ─────────────────────────
+  const starterPlan = await prisma.subscriptionPlan.findUnique({
+    where: { name: 'STARTER' },
+  });
+
+  if (starterPlan) {
+    for (const company of upsertedCompanies) {
+      const companyObj = await prisma.company.findUnique({
+        where: { slug: company.slug },
+      });
+      if (companyObj) {
+        await prisma.subscription.upsert({
+          where: { companyId: companyObj.id },
+          update: {},
+          create: {
+            companyId: companyObj.id,
+            planId: starterPlan.id,
+            status: 'ACTIVE',
+          },
+        });
+      }
+    }
+    console.log(`✓ Assigned Starter plan to all companies`);
+  }
+
+  // ── Seed Mock Job Openings (for frontend testing) ───────────────────────
+  const mockJobOpenings = [
+    {
+      companySlug: 'lambda-global',
+      title: 'Senior Full Stack Engineer',
+      description:
+        'Build and scale core marketplace features for recruiter-company workflows, messaging, and analytics dashboards.',
+      department: 'Engineering',
+      location: 'Remote',
+      employmentType: 'FULL_TIME',
+      salaryMin: 8000000,
+      salaryMax: 12000000,
+      salaryCurrency: 'MNT',
+      seniorityLevel: 'SENIOR',
+      experienceYears: 5,
+      feeType: 'PERCENTAGE',
+      feePercentage: 12,
+      feeFixed: null,
+      status: 'OPEN',
+      skills: ['TypeScript', 'NestJS', 'PostgreSQL', 'React'],
+    },
+    {
+      companySlug: 'oyu-tolgoi',
+      title: 'HR Operations Specialist',
+      description:
+        'Own recruitment operations, interview coordination, onboarding process quality, and stakeholder reporting.',
+      department: 'Human Resources',
+      location: 'Ulaanbaatar',
+      employmentType: 'FULL_TIME',
+      salaryMin: 3500000,
+      salaryMax: 5500000,
+      salaryCurrency: 'MNT',
+      seniorityLevel: 'MID',
+      experienceYears: 3,
+      feeType: 'FIXED',
+      feePercentage: null,
+      feeFixed: 2000000,
+      status: 'OPEN',
+      skills: ['Recruitment', 'Excel', 'Stakeholder Management', 'HRIS'],
+    },
+    {
+      companySlug: 'mobicom',
+      title: 'Part-time Content & Social Coordinator',
+      description:
+        'Create bilingual social content calendars, coordinate campaigns, and support employer branding initiatives.',
+      department: 'Marketing',
+      location: 'Ulaanbaatar',
+      employmentType: 'PART_TIME',
+      salaryMin: 1800000,
+      salaryMax: 2800000,
+      salaryCurrency: 'MNT',
+      seniorityLevel: 'JUNIOR',
+      experienceYears: 1,
+      feeType: 'PERCENTAGE',
+      feePercentage: 10,
+      feeFixed: null,
+      status: 'OPEN',
+      skills: ['Content Strategy', 'Canva', 'Copywriting', 'Social Media'],
+    },
+  ] as const;
+
+  let seededJobCount = 0;
+  for (const job of mockJobOpenings) {
+    const company = await prisma.company.findUnique({
+      where: { slug: job.companySlug },
+      select: { id: true },
+    });
+
+    if (!company) {
+      console.warn(`  ⚠ Skipped job "${job.title}" because company slug "${job.companySlug}" was not found`);
+      continue;
+    }
+
+    const skillIds: string[] = [];
+    for (const skillName of job.skills) {
+      const skill = await prisma.skill.upsert({
+        where: { value: skillName },
+        update: { type: 'SKILL' },
+        create: { type: 'SKILL', value: skillName },
+        select: { id: true },
+      });
+      skillIds.push(skill.id);
+    }
+
+    const existingJob = await prisma.jobOpening.findFirst({
+      where: {
+        companyId: company.id,
+        title: job.title,
+      },
+      select: { id: true },
+    });
+
+    if (existingJob) {
+      await prisma.jobOpening.update({
+        where: { id: existingJob.id },
+        data: {
+          description: job.description,
+          department: job.department,
+          location: job.location,
+          employmentType: job.employmentType,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          salaryCurrency: job.salaryCurrency,
+          seniorityLevel: job.seniorityLevel,
+          experienceYears: job.experienceYears,
+          feeType: job.feeType,
+          feePercentage: job.feePercentage,
+          feeFixed: job.feeFixed,
+          status: job.status,
+          skills: {
+            deleteMany: {},
+            create: skillIds.map((skillId) => ({
+              skill: { connect: { id: skillId } },
+            })),
+          },
+        },
+      });
+    } else {
+      await prisma.jobOpening.create({
+        data: {
+          companyId: company.id,
+          title: job.title,
+          description: job.description,
+          department: job.department,
+          location: job.location,
+          employmentType: job.employmentType,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          salaryCurrency: job.salaryCurrency,
+          seniorityLevel: job.seniorityLevel,
+          experienceYears: job.experienceYears,
+          feeType: job.feeType,
+          feePercentage: job.feePercentage,
+          feeFixed: job.feeFixed,
+          status: job.status,
+          skills: {
+            create: skillIds.map((skillId) => ({
+              skill: { connect: { id: skillId } },
+            })),
+          },
+        },
+      });
+    }
+
+    seededJobCount += 1;
+    console.log(`  ✓ Mock job: ${job.title} (${job.companySlug})`);
+  }
+
+  console.log(`✓ Seeded ${seededJobCount} mock job openings`);
+
   console.log(`\n🎉 Seed complete!`);
   console.log(`   ✓ ${recruiters.length} recruiters`);
   console.log(`   ✓ ${upsertedCompanies.length} companies`);
   console.log(`   ✓ 1 form template with ${formTemplate.fields?.length || 0} fields`);
+  console.log(`   ✓ ${subscriptionPlansData.length} subscription plans`);
+  console.log(`   ✓ ${mockJobOpenings.length} mock job openings`);
   console.log(`   Default password: ${DEFAULT_PASSWORD}`);
 
 }

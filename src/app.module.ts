@@ -13,6 +13,12 @@ import { RequestsModule } from './modules/requests/requests.module';
 import { FormTemplatesModule } from './modules/form-templates/form-templates.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
+import { ApplicationsModule } from './modules/applications/applications.module';
+import { EngagementsModule } from './modules/engagements/engagements.module';
+import { PlacementsModule } from './modules/placements/placements.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -25,6 +31,12 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     SkillsModule,
     RequestsModule,
     FormTemplatesModule,
+    SubscriptionsModule,
+    JobOpeningsModule,
+    ApplicationsModule,
+    EngagementsModule,
+    PlacementsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

@@ -6,18 +6,78 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// USER & AUTH
+// ─────────────────────────────────────────────────────────────────────────────
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   email     String   @unique
-  password  String
+  password  String?
   name      String
-  role      String
+  role      String   // Role enum: RECRUITER | COMPANY | ADMIN
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  recruiterProfile RecruiterProfile?
-  company          Company?
+  recruiterProfile      RecruiterProfile?
+  company               Company?
+  notifications         Notification[]
+  sentMessages          Message[]         @relation("SentMessages")
+  auditLogs             AuditLog[]
+  approvedRecruiters    RecruiterProfile[] @relation("ApprovedBy")  // admin who approved recruiters
+  recruiterApplications RecruiterApplication[] @relation("SubmittedBy")  // recruiter who submitted application
+  reviewedApplications  RecruiterApplication[] @relation("ReviewedBy")  // admin who reviewed applications
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUBSCRIPTION & BILLING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("MNT")
+  interval    String   // BillingInterval enum: MONTHLY | YEARLY
+  features    Json?    // Limiters: max_jobs, max_applications, etc.
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                String           @id @default(uuid()) @db.Uuid
+  companyId         String           @unique @db.Uuid
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  planId            String           @db.Uuid
+  plan              SubscriptionPlan @relation(fields: [planId], references: [id])
+  status            String           @default("ACTIVE") // SubscriptionStatus enum: ACTIVE | CANCELLED | EXPIRED
+  startDate         DateTime         @default(now())
+  endDate           DateTime?
+  cancelAtPeriodEnd Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  payments Payment[]
+}
+
+model Payment {
+  id             String       @id @default(uuid()) @db.Uuid
+  subscriptionId String       @db.Uuid
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  amount         Decimal      @db.Decimal(10, 2)
+  currency       String       @default("MNT")
+  status         String       // PaymentStatus enum: PENDING | SUCCEEDED | FAILED
+  providerId     String?      // e.g. Stripe payment intent ID
+  createdAt      DateTime     @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECRUITER PROFILE
+// ─────────────────────────────────────────────────────────────────────────────
 
 model RecruiterProfile {
   id     String @id @default(uuid()) @db.Uuid
@@ -25,14 +85,14 @@ model RecruiterProfile {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Public identity
-  slug            String? @unique
+  slug            String?  @unique
   title           String?
   tagline         String?
   bio             String?
   photoUrl        String?
   heroImageUrl    String?
   yearsExperience Int?
-  isLeadPartner   Boolean @default(false)
+  isLeadPartner   Boolean  @default(false)
   partnerBadge    String?
 
   // Contact
@@ -41,81 +101,131 @@ model RecruiterProfile {
   location    String?
   timezone    String?
 
+  // Availability
+  isAvailable       Boolean @default(true)
+  availabilityNote  String? // e.g. "Available from March 2025"
+
+  // Onboarding & Approval (recruiter application flow)
+  joinType           String    @default("APPLICATION") // JoinType enum: APPLICATION | INVITED | INTERNAL
+  approvedAt         DateTime?
+  approvedById       String?   @db.Uuid          // Admin who approved them
+  approvedBy         User?     @relation("ApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  internalNote       String?   // Admin-only notes
+  isVerified         Boolean   @default(false)
+  verifiedAt         DateTime?
+
   // Meta
-  rating      Float     @default(0)
-  visibility  String    @default("DRAFT")
+  rating      Float     @default(0) // Denormalised average — recomputed from Review
+  visibility  String    @default("DRAFT") // ProfileVisibility enum
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  tags           Tag[]
+  tags           RecruiterTag[]
   links          RecruiterLink[]
   activeSearches ActiveSearch[]
   insights       RecruiterInsight[]
   requests       RecruitRequest[]
+  applications   Application[]
+  engagements    Engagement[]
+  reviewsGiven   Review[]           @relation("ReviewsGiven")
+  reviewsReceived Review[]          @relation("ReviewsReceived")
+  shortlists     Shortlist[]
+  messageThreads MessageThread[]
 
   @@index([visibility])
+  @@index([isAvailable])
+  @@index([approvedAt])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPANY
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Company {
-  id               String    @id @default(uuid()) @db.Uuid
-  userId           String    @unique @db.Uuid
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name             String
-  slug             String?   @unique
-  industry         String?
-  website          String?
-  logoUrl          String?
-  description      String?
-  size             String?
-  location         String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String?  @unique
+  industry    String?
+  website     String?
+  logoUrl     String?
+  description String?
+  size        String?  // CompanySize enum: STARTUP | SMALL | MEDIUM | LARGE | ENTERPRISE
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  tags           Tag[]
+  subscription   Subscription?   // company has a subscription plan
+  tags           CompanyTag[]
   requests       RecruitRequest[]
   activeSearches ActiveSearch[]
+  jobOpenings    JobOpening[]
+  engagements    Engagement[]
+  reviewsGiven   Review[]        @relation("CompanyReviewsGiven")
+  shortlists     Shortlist[]
+  messageThreads MessageThread[]
+  invoices       Invoice[]       // company receives invoices
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SKILLS & TAGS  (split into dedicated join tables — no more ambiguous Tag)
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Skill {
   id        String   @id @default(uuid()) @db.Uuid
-  type      String
+  type      String   // SkillType enum: SKILL | INDUSTRY | EXPERTISE | LANGUAGE | CERTIFICATION
   value     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tags Tag[]
+  recruiterTags RecruiterTag[]
+  companyTags   CompanyTag[]
+  jobSkills     JobSkill[]
 
   @@unique([type, value])
   @@index([type])
 }
 
-model Tag {
-  id                 String            @id @default(uuid()) @db.Uuid
-  recruiterProfileId String?           @db.Uuid
-  recruiterProfile   RecruiterProfile? @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
-  companyId          String?           @db.Uuid
-  company            Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  skillId            String            @db.Uuid
-  skill              Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
+model RecruiterTag {
+  id                 String           @id @default(uuid()) @db.Uuid
+  recruiterProfileId String           @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  skillId            String           @db.Uuid
+  skill              Skill            @relation(fields: [skillId], references: [id], onDelete: Cascade)
   meta               String?
-  sortOrder          Int               @default(0)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  sortOrder          Int              @default(0)
+  createdAt          DateTime         @default(now())
 
   @@unique([recruiterProfileId, skillId])
-  @@unique([companyId, skillId])
   @@index([recruiterProfileId, sortOrder])
-  @@index([companyId, sortOrder])
-  @@index([skillId])
 }
+
+model CompanyTag {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @db.Uuid
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  skillId   String   @db.Uuid
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  meta      String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, skillId])
+  @@index([companyId, sortOrder])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECRUITER PROFILE — SUPPORTING MODELS
+// ─────────────────────────────────────────────────────────────────────────────
 
 model RecruiterLink {
   id                 String           @id @default(uuid()) @db.Uuid
   recruiterProfileId String           @db.Uuid
   recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
-  type               String
+  type               String           // LinkType enum
   label              String?
   url                String
   sortOrder          Int              @default(0)
@@ -136,7 +246,7 @@ model ActiveSearch {
   industry           String?
   location           String?
   summary            String?
-  status             String           @default("ACTIVE")
+  status             String           @default("ACTIVE") // ActiveSearchStatus enum
   sortOrder          Int              @default(0)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
@@ -153,7 +263,7 @@ model RecruiterInsight {
   description        String?
   mediaUrl           String?
   thumbnailUrl       String?
-  status             String           @default("DRAFT")
+  status             String           @default("DRAFT") // InsightStatus enum
   sortOrder          Int              @default(0)
   publishedAt        DateTime?
   createdAt          DateTime         @default(now())
@@ -161,6 +271,58 @@ model RecruiterInsight {
 
   @@index([recruiterProfileId, status])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DISCOVERY — SHORTLIST
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Shortlist {
+  id                 String           @id @default(uuid()) @db.Uuid
+  companyId          String           @db.Uuid
+  company            Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  recruiterProfileId String           @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+  note               String?
+  createdAt          DateTime         @default(now())
+
+  @@unique([companyId, recruiterProfileId])
+  @@index([companyId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECRUITER APPLICATION & ONBOARDING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RecruiterApplication {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String?   @unique @db.Uuid       // set after account created
+  user        User?     @relation("SubmittedBy", fields: [userId], references: [id], onDelete: SetNull)
+
+  // Application form data
+  fullName    String
+  email       String
+  phone       String?
+  linkedinUrl String?
+  bio         String?
+  yearsExp    Int?
+  industries  String[]  // array of industry strings
+  cvUrl       String?   // uploaded CV/resume
+
+  status      String    @default("PENDING")  // RecruiterApplicationStatus: PENDING | REVIEWING | APPROVED | REJECTED
+  reviewNote  String?   // admin feedback
+  reviewedBy  String?   @db.Uuid
+  reviewedByUser User?  @relation("ReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([email])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DYNAMIC INTAKE FORMS
+// ─────────────────────────────────────────────────────────────────────────────
 
 model FormTemplate {
   id        String   @id @default(uuid()) @db.Uuid
@@ -179,9 +341,9 @@ model FormField {
   formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
   key            String
   label          String
-  type           String       @default("TEXT")
+  type           String       @default("TEXT") // FormFieldType enum
   placeholder    String?
-  options        String?
+  options        String?      // JSON-encoded option list for SELECT / MULTI_SELECT
   isRequired     Boolean      @default(false)
   sortOrder      Int          @default(0)
   createdAt      DateTime     @default(now())
@@ -201,7 +363,7 @@ model RecruitRequest {
   company        Company?          @relation(fields: [companyId], references: [id])
   recruiterId    String?           @db.Uuid
   recruiter      RecruiterProfile? @relation(fields: [recruiterId], references: [id])
-  status         String            @default("PENDING")
+  status         String            @default("PENDING") // RequestStatus enum
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -223,4 +385,283 @@ model RequestAnswer {
   updatedAt        DateTime       @updatedAt
 
   @@unique([recruitRequestId, formFieldId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECRUITMENT — JOB OPENING / APPLICATION / ENGAGEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model JobOpening {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @db.Uuid
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Role details
+  title           String
+  description     String
+  department      String?
+  location        String?
+  employmentType  String?  // EmploymentType enum: FULL_TIME | PART_TIME | CONTRACT
+
+  // Candidate expectations
+  salaryMin       Int?
+  salaryMax       Int?
+  salaryCurrency  String   @default("MNT")
+  seniorityLevel  String?  // SeniorityLevel enum: JUNIOR | MID | SENIOR | LEAD | EXECUTIVE
+  experienceYears Int?
+
+  // Recruiter fee (what company pays on success)
+  feeType         String   @default("PERCENTAGE") // FeeType enum: PERCENTAGE | FIXED
+  feePercentage   Decimal? @db.Decimal(5, 2)
+  feeFixed        Int?
+
+  // Status
+  status          String   @default("OPEN")
+  // JobOpeningStatus enum: OPEN | IN_PROGRESS | FILLED | ON_HOLD | CANCELLED
+  openedAt        DateTime @default(now())
+  filledAt        DateTime?
+  deadline        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  skills          JobSkill[]
+  applications    Application[]
+  engagements     Engagement[]
+
+  @@index([companyId, status])
+  @@index([status])
+}
+
+model JobSkill {
+  id          String   @id @default(uuid()) @db.Uuid
+  jobOpeningId String  @db.Uuid
+  jobOpening  JobOpening @relation(fields: [jobOpeningId], references: [id], onDelete: Cascade)
+  skillId     String   @db.Uuid
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([jobOpeningId, skillId])
+}
+
+model Application {
+  id                 String           @id @default(uuid()) @db.Uuid
+  jobOpeningId       String           @db.Uuid
+  jobOpening         JobOpening       @relation(fields: [jobOpeningId], references: [id], onDelete: Cascade)
+  recruiterProfileId String           @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id], onDelete: Cascade)
+
+  pitch              String?
+  estimatedDays      Int?
+  status             String           @default("PENDING")
+  // ApplicationStatus enum: PENDING | ACCEPTED | REJECTED | WITHDRAWN
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  engagement         Engagement?
+
+  @@unique([jobOpeningId, recruiterProfileId])
+  @@index([jobOpeningId, status])
+  @@index([recruiterProfileId])
+}
+
+model Engagement {
+  id                 String           @id @default(uuid()) @db.Uuid
+  jobOpeningId       String           @db.Uuid
+  jobOpening         JobOpening       @relation(fields: [jobOpeningId], references: [id])
+  recruiterProfileId String           @db.Uuid
+  recruiterProfile   RecruiterProfile @relation(fields: [recruiterProfileId], references: [id])
+  companyId          String           @db.Uuid
+  company            Company          @relation(fields: [companyId], references: [id])
+  applicationId      String?          @unique @db.Uuid
+  application        Application?     @relation(fields: [applicationId], references: [id])
+
+  status             String           @default("ACTIVE")
+  // EngagementStatus enum: ACTIVE | FILLED | CLOSED | CANCELLED
+
+  agreedFeeType      String?
+  agreedFeePercentage Decimal?        @db.Decimal(5, 2)
+  agreedFeeFixed     Int?
+
+  startDate          DateTime         @default(now())
+  endDate            DateTime?
+  notes              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  placements         Placement[]
+  invoices           Invoice[]
+  messageThreads     MessageThread[]
+
+  @@index([companyId, status])
+  @@index([recruiterProfileId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLACEMENT & INVOICING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Placement {
+  id               String      @id @default(uuid()) @db.Uuid
+  engagementId     String      @db.Uuid
+  engagement       Engagement  @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  // Candidate info
+  candidateName    String
+  candidateEmail   String?
+  candidateLinkedin String?
+
+  // Placement outcome
+  offeredSalary    Int?
+  startDate        DateTime?
+  guaranteeDays    Int?
+
+  status           String      @default("PENDING")
+  // PlacementStatus enum: PENDING | OFFERED | ACCEPTED | STARTED | GUARANTEED | CANCELLED
+  placedAt         DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  invoice          Invoice?
+
+  @@index([engagementId, status])
+}
+
+model Invoice {
+  id            String      @id @default(uuid()) @db.Uuid
+  engagementId  String      @db.Uuid
+  engagement    Engagement  @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  placementId   String?     @unique @db.Uuid
+  placement     Placement?  @relation(fields: [placementId], references: [id])
+  companyId     String      @db.Uuid
+  company       Company     @relation(fields: [companyId], references: [id])
+
+  // Fee breakdown
+  candidateSalary  Int?
+  feeType          String
+  feePercentage    Decimal? @db.Decimal(5, 2)
+  subtotal         Int
+  platformFee      Int?
+  amount           Int
+
+  currency         String   @default("MNT")
+  status           String   @default("DRAFT")
+  // InvoiceStatus enum: DRAFT | SENT | PAID | OVERDUE | CANCELLED
+  issuedAt         DateTime?
+  dueAt            DateTime?
+  paidAt           DateTime?
+  notes            String?
+  providerId       String?  // QPay transaction ID
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([companyId, status])
+  @@index([engagementId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEWS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Review {
+  id                 String           @id @default(uuid()) @db.Uuid
+  engagementId       String           @db.Uuid
+  // Who wrote it
+  authorCompanyId    String?          @db.Uuid
+  authorCompany      Company?         @relation("CompanyReviewsGiven", fields: [authorCompanyId], references: [id])
+  authorRecruiterId  String?          @db.Uuid
+  authorRecruiter    RecruiterProfile? @relation("ReviewsGiven", fields: [authorRecruiterId], references: [id])
+  // Who received it
+  targetRecruiterId  String?          @db.Uuid
+  targetRecruiter    RecruiterProfile? @relation("ReviewsReceived", fields: [targetRecruiterId], references: [id])
+  rating             Int              // 1–5
+  comment            String?
+  isPublic           Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([targetRecruiterId])
+  @@index([engagementId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MESSAGING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model MessageThread {
+  id                 String            @id @default(uuid()) @db.Uuid
+  // A thread can be linked to an engagement, or be a general enquiry
+  engagementId       String?           @db.Uuid
+  engagement         Engagement?       @relation(fields: [engagementId], references: [id], onDelete: SetNull)
+  companyId          String?           @db.Uuid
+  company            Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  recruiterProfileId String?           @db.Uuid
+  recruiterProfile   RecruiterProfile? @relation(fields: [recruiterProfileId], references: [id], onDelete: SetNull)
+  subject            String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  messages Message[]
+
+  @@index([companyId])
+  @@index([recruiterProfileId])
+  @@index([engagementId])
+}
+
+model Message {
+  id       String        @id @default(uuid()) @db.Uuid
+  threadId String        @db.Uuid
+  thread   MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId String        @db.Uuid
+  sender   User          @relation("SentMessages", fields: [senderId], references: [id])
+  body     String
+  readAt   DateTime?
+  createdAt DateTime     @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([senderId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String    // NotificationType enum — see enums file
+  title      String
+  body       String?
+  // Polymorphic reference — store the entity type + id
+  entityType String?   // e.g. "Contract" | "Proposal" | "Message" | "Invoice"
+  entityId   String?   @db.Uuid
+  isRead     Boolean   @default(false)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @db.Uuid
+  actor      User     @relation(fields: [actorId], references: [id])
+  // What was changed
+  entity     String   // e.g. "Contract" | "Proposal" | "Invoice" | "Milestone"
+  entityId   String   @db.Uuid
+  action     String   // AuditAction enum: CREATED | UPDATED | DELETED | STATUS_CHANGED
+  // Snapshot of before/after for status changes and field edits
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@index([createdAt])
 }

@@ -35,8 +35,12 @@ export class RecruitersController {
 
   @Public()
   @Get()
-  findAll(@Query('visibility') visibility?: string) {
-    return this.recruitersService.findAll(visibility);
+  findAll(
+    @Query('visibility') visibility?: string,
+    @Query('isLeadPartner') isLeadPartner?: string,
+  ) {
+    const isLeadPartnerBool = isLeadPartner === 'true' ? true : isLeadPartner === 'false' ? false : undefined;
+    return this.recruitersService.findAll(visibility, isLeadPartnerBool);
   }
 
   @Public()
@@ -132,6 +136,12 @@ export class RecruitersController {
   }
 
   // ─── Insights ──────────────────────────────────────────
+
+  @Public()
+  @Get('insights')
+  getPlatformInsights() {
+    return this.recruitersService.getPlatformInsights();
+  }
 
   @Post(':id/insights')
   @Roles(Role.RECRUITER, Role.ADMIN)
