@@ -5,11 +5,13 @@ import {
   Body,
   Param,
   NotFoundException,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Role } from '../../common/enums';
 
 @Controller('subscriptions')
 export class SubscriptionsController {
@@ -49,19 +51,26 @@ export class SubscriptionsController {
    */
   @Get('company/:companyId/features')
   async getCompanyFeatures(@Param('companyId') companyId: string) {
-    const features = await this.subscriptionsService.getCompanyFeatures(companyId);
+    const features =
+      await this.subscriptionsService.getCompanyFeatures(companyId);
     return { companyId, features };
   }
 
   /**
    * Create or upgrade subscription for company
    */
+  @Roles(Role.COMPANY, Role.ADMIN)
   @Post('company/:companyId')
   async createOrUpdate(
     @Param('companyId') companyId: string,
     @Body() body: { planId: string },
+    @CurrentUser() user: { id: string; role: string },
   ) {
-    return this.subscriptionsService.createOrUpdateSubscription(companyId, body.planId);
+    return this.subscriptionsService.createOrUpdateSubscriptionForUser(
+      companyId,
+      body.planId,
+      user,
+    );
   }
 
   /**

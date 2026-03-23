@@ -363,7 +363,10 @@ model RecruitRequest {
   company        Company?          @relation(fields: [companyId], references: [id])
   recruiterId    String?           @db.Uuid
   recruiter      RecruiterProfile? @relation(fields: [recruiterId], references: [id])
-  status         String            @default("PENDING") // RequestStatus enum
+  status         String            @default("PENDING") // RequestStatus enum: PENDING | ACCEPTED | COUNTER_PROPOSED | COMPLETED | DECLINED
+  respondedAt    DateTime?
+  counterProposal Json?
+  counterProposalMessage String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 

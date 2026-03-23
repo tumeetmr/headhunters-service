@@ -16,6 +16,7 @@ import { CreateRecruiterTagDto } from './dto/create-recruiter-tag.dto';
 import { CreateRecruiterLinkDto } from './dto/create-recruiter-link.dto';
 import { CreateActiveSearchDto } from './dto/create-active-search.dto';
 import { CreateInsightDto } from './dto/create-insight.dto';
+import { CreateRecruiterRatingDto } from './dto/create-recruiter-rating.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -39,7 +40,12 @@ export class RecruitersController {
     @Query('visibility') visibility?: string,
     @Query('isLeadPartner') isLeadPartner?: string,
   ) {
-    const isLeadPartnerBool = isLeadPartner === 'true' ? true : isLeadPartner === 'false' ? false : undefined;
+    const isLeadPartnerBool =
+      isLeadPartner === 'true'
+        ? true
+        : isLeadPartner === 'false'
+          ? false
+          : undefined;
     return this.recruitersService.findAll(visibility, isLeadPartnerBool);
   }
 
@@ -165,5 +171,26 @@ export class RecruitersController {
   @Roles(Role.RECRUITER, Role.ADMIN)
   removeInsight(@Param('insightId', ParseUUIDPipe) insightId: string) {
     return this.recruitersService.removeInsight(insightId);
+  }
+
+  // ─── Ratings ──────────────────────────────────────────
+
+  @Post(':id/ratings')
+  @Roles(Role.COMPANY)
+  addRating(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateRecruiterRatingDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.recruitersService.addRating(id, dto, userId);
+  }
+
+  @Get(':id/ratings/me')
+  @Roles(Role.COMPANY)
+  getMyRating(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.recruitersService.getMyRating(id, userId);
   }
 }

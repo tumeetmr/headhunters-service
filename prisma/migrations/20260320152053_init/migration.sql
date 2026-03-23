@@ -30,7 +30,7 @@ CREATE TABLE "SubscriptionPlan" (
 -- CreateTable
 CREATE TABLE "Subscription" (
     "id" UUID NOT NULL,
-    "userId" UUID NOT NULL,
+    "companyId" UUID NOT NULL,
     "planId" UUID NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'ACTIVE',
     "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,6 +74,12 @@ CREATE TABLE "RecruiterProfile" (
     "timezone" TEXT,
     "isAvailable" BOOLEAN NOT NULL DEFAULT true,
     "availabilityNote" TEXT,
+    "joinType" TEXT NOT NULL DEFAULT 'APPLICATION',
+    "approvedAt" TIMESTAMP(3),
+    "approvedById" UUID,
+    "internalNote" TEXT,
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
+    "verifiedAt" TIMESTAMP(3),
     "rating" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "visibility" TEXT NOT NULL DEFAULT 'DRAFT',
     "publishedAt" TIMESTAMP(3),
@@ -197,6 +203,28 @@ CREATE TABLE "Shortlist" (
 );
 
 -- CreateTable
+CREATE TABLE "RecruiterApplication" (
+    "id" UUID NOT NULL,
+    "userId" UUID,
+    "fullName" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "phone" TEXT,
+    "linkedinUrl" TEXT,
+    "bio" TEXT,
+    "yearsExp" INTEGER,
+    "industries" TEXT[],
+    "cvUrl" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "reviewNote" TEXT,
+    "reviewedBy" UUID,
+    "reviewedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "RecruiterApplication_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "FormTemplate" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
@@ -231,6 +259,9 @@ CREATE TABLE "RecruitRequest" (
     "companyId" UUID,
     "recruiterId" UUID,
     "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "respondedAt" TIMESTAMP(3),
+    "counterProposal" JSONB,
+    "counterProposalMessage" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -250,88 +281,105 @@ CREATE TABLE "RequestAnswer" (
 );
 
 -- CreateTable
-CREATE TABLE "Project" (
+CREATE TABLE "JobOpening" (
     "id" UUID NOT NULL,
     "companyId" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "budget" DECIMAL(10,2),
-    "currency" TEXT NOT NULL DEFAULT 'MNT',
-    "status" TEXT NOT NULL DEFAULT 'OPEN',
-    "type" TEXT NOT NULL DEFAULT 'FIXED',
+    "department" TEXT,
     "location" TEXT,
+    "employmentType" TEXT,
+    "salaryMin" INTEGER,
+    "salaryMax" INTEGER,
+    "salaryCurrency" TEXT NOT NULL DEFAULT 'MNT',
+    "seniorityLevel" TEXT,
+    "experienceYears" INTEGER,
+    "feeType" TEXT NOT NULL DEFAULT 'PERCENTAGE',
+    "feePercentage" DECIMAL(5,2),
+    "feeFixed" INTEGER,
+    "status" TEXT NOT NULL DEFAULT 'OPEN',
+    "openedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "filledAt" TIMESTAMP(3),
+    "deadline" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "JobOpening_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "ProjectSkill" (
+CREATE TABLE "JobSkill" (
     "id" UUID NOT NULL,
-    "projectId" UUID NOT NULL,
+    "jobOpeningId" UUID NOT NULL,
     "skillId" UUID NOT NULL,
 
-    CONSTRAINT "ProjectSkill_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "JobSkill_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Proposal" (
+CREATE TABLE "Application" (
     "id" UUID NOT NULL,
-    "projectId" UUID NOT NULL,
+    "jobOpeningId" UUID NOT NULL,
     "recruiterProfileId" UUID NOT NULL,
-    "coverLetter" TEXT,
-    "bidAmount" DECIMAL(10,2),
+    "pitch" TEXT,
+    "estimatedDays" INTEGER,
     "status" TEXT NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Proposal_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Application_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Contract" (
+CREATE TABLE "Engagement" (
     "id" UUID NOT NULL,
-    "projectId" UUID NOT NULL,
+    "jobOpeningId" UUID NOT NULL,
     "recruiterProfileId" UUID NOT NULL,
     "companyId" UUID NOT NULL,
-    "proposalId" UUID,
+    "applicationId" UUID,
     "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+    "agreedFeeType" TEXT,
+    "agreedFeePercentage" DECIMAL(5,2),
+    "agreedFeeFixed" INTEGER,
     "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endDate" TIMESTAMP(3),
-    "terms" TEXT,
-    "rate" DECIMAL(10,2),
-    "currency" TEXT NOT NULL DEFAULT 'MNT',
+    "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Contract_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Engagement_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Milestone" (
+CREATE TABLE "Placement" (
     "id" UUID NOT NULL,
-    "contractId" UUID NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT,
-    "amount" DECIMAL(10,2) NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'MNT',
-    "dueDate" TIMESTAMP(3),
+    "engagementId" UUID NOT NULL,
+    "candidateName" TEXT NOT NULL,
+    "candidateEmail" TEXT,
+    "candidateLinkedin" TEXT,
+    "offeredSalary" INTEGER,
+    "startDate" TIMESTAMP(3),
+    "guaranteeDays" INTEGER,
     "status" TEXT NOT NULL DEFAULT 'PENDING',
-    "completedAt" TIMESTAMP(3),
+    "placedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Milestone_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Placement_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Invoice" (
     "id" UUID NOT NULL,
-    "contractId" UUID NOT NULL,
-    "milestoneId" UUID,
-    "subtotal" DECIMAL(10,2) NOT NULL,
-    "platformFeeRate" DECIMAL(5,4) NOT NULL,
+    "engagementId" UUID NOT NULL,
+    "placementId" UUID,
+    "companyId" UUID NOT NULL,
+    "candidateSalary" INTEGER,
+    "feeType" TEXT NOT NULL,
+    "feePercentage" DECIMAL(5,2),
+    "subtotal" INTEGER NOT NULL,
+    "platformFee" INTEGER,
+    "amount" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'MNT',
     "status" TEXT NOT NULL DEFAULT 'DRAFT',
     "issuedAt" TIMESTAMP(3),
@@ -348,7 +396,7 @@ CREATE TABLE "Invoice" (
 -- CreateTable
 CREATE TABLE "Review" (
     "id" UUID NOT NULL,
-    "contractId" UUID NOT NULL,
+    "engagementId" UUID NOT NULL,
     "authorCompanyId" UUID,
     "authorRecruiterId" UUID,
     "targetRecruiterId" UUID,
@@ -364,7 +412,7 @@ CREATE TABLE "Review" (
 -- CreateTable
 CREATE TABLE "MessageThread" (
     "id" UUID NOT NULL,
-    "contractId" UUID,
+    "engagementId" UUID,
     "companyId" UUID,
     "recruiterProfileId" UUID,
     "subject" TEXT,
@@ -425,7 +473,7 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "SubscriptionPlan_name_key" ON "SubscriptionPlan"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
+CREATE UNIQUE INDEX "Subscription_companyId_key" ON "Subscription"("companyId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RecruiterProfile_userId_key" ON "RecruiterProfile"("userId");
@@ -438,6 +486,9 @@ CREATE INDEX "RecruiterProfile_visibility_idx" ON "RecruiterProfile"("visibility
 
 -- CreateIndex
 CREATE INDEX "RecruiterProfile_isAvailable_idx" ON "RecruiterProfile"("isAvailable");
+
+-- CreateIndex
+CREATE INDEX "RecruiterProfile_approvedAt_idx" ON "RecruiterProfile"("approvedAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Company_userId_key" ON "Company"("userId");
@@ -485,6 +536,15 @@ CREATE INDEX "Shortlist_companyId_idx" ON "Shortlist"("companyId");
 CREATE UNIQUE INDEX "Shortlist_companyId_recruiterProfileId_key" ON "Shortlist"("companyId", "recruiterProfileId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "RecruiterApplication_userId_key" ON "RecruiterApplication"("userId");
+
+-- CreateIndex
+CREATE INDEX "RecruiterApplication_status_idx" ON "RecruiterApplication"("status");
+
+-- CreateIndex
+CREATE INDEX "RecruiterApplication_email_idx" ON "RecruiterApplication"("email");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "FormTemplate_name_key" ON "FormTemplate"("name");
 
 -- CreateIndex
@@ -506,25 +566,49 @@ CREATE INDEX "RecruitRequest_recruiterId_idx" ON "RecruitRequest"("recruiterId")
 CREATE UNIQUE INDEX "RequestAnswer_recruitRequestId_formFieldId_key" ON "RequestAnswer"("recruitRequestId", "formFieldId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectSkill_projectId_skillId_key" ON "ProjectSkill"("projectId", "skillId");
+CREATE INDEX "JobOpening_companyId_status_idx" ON "JobOpening"("companyId", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Contract_proposalId_key" ON "Contract"("proposalId");
+CREATE INDEX "JobOpening_status_idx" ON "JobOpening"("status");
 
 -- CreateIndex
-CREATE INDEX "Milestone_contractId_status_idx" ON "Milestone"("contractId", "status");
+CREATE UNIQUE INDEX "JobSkill_jobOpeningId_skillId_key" ON "JobSkill"("jobOpeningId", "skillId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Invoice_milestoneId_key" ON "Invoice"("milestoneId");
+CREATE INDEX "Application_jobOpeningId_status_idx" ON "Application"("jobOpeningId", "status");
 
 -- CreateIndex
-CREATE INDEX "Invoice_contractId_status_idx" ON "Invoice"("contractId", "status");
+CREATE INDEX "Application_recruiterProfileId_idx" ON "Application"("recruiterProfileId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Application_jobOpeningId_recruiterProfileId_key" ON "Application"("jobOpeningId", "recruiterProfileId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Engagement_applicationId_key" ON "Engagement"("applicationId");
+
+-- CreateIndex
+CREATE INDEX "Engagement_companyId_status_idx" ON "Engagement"("companyId", "status");
+
+-- CreateIndex
+CREATE INDEX "Engagement_recruiterProfileId_status_idx" ON "Engagement"("recruiterProfileId", "status");
+
+-- CreateIndex
+CREATE INDEX "Placement_engagementId_status_idx" ON "Placement"("engagementId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Invoice_placementId_key" ON "Invoice"("placementId");
+
+-- CreateIndex
+CREATE INDEX "Invoice_companyId_status_idx" ON "Invoice"("companyId", "status");
+
+-- CreateIndex
+CREATE INDEX "Invoice_engagementId_idx" ON "Invoice"("engagementId");
 
 -- CreateIndex
 CREATE INDEX "Review_targetRecruiterId_idx" ON "Review"("targetRecruiterId");
 
 -- CreateIndex
-CREATE INDEX "Review_contractId_idx" ON "Review"("contractId");
+CREATE INDEX "Review_engagementId_idx" ON "Review"("engagementId");
 
 -- CreateIndex
 CREATE INDEX "MessageThread_companyId_idx" ON "MessageThread"("companyId");
@@ -533,7 +617,7 @@ CREATE INDEX "MessageThread_companyId_idx" ON "MessageThread"("companyId");
 CREATE INDEX "MessageThread_recruiterProfileId_idx" ON "MessageThread"("recruiterProfileId");
 
 -- CreateIndex
-CREATE INDEX "MessageThread_contractId_idx" ON "MessageThread"("contractId");
+CREATE INDEX "MessageThread_engagementId_idx" ON "MessageThread"("engagementId");
 
 -- CreateIndex
 CREATE INDEX "Message_threadId_createdAt_idx" ON "Message"("threadId", "createdAt");
@@ -557,7 +641,7 @@ CREATE INDEX "AuditLog_actorId_idx" ON "AuditLog"("actorId");
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
 
 -- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "SubscriptionPlan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -567,6 +651,9 @@ ALTER TABLE "Payment" ADD CONSTRAINT "Payment_subscriptionId_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "RecruiterProfile" ADD CONSTRAINT "RecruiterProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RecruiterProfile" ADD CONSTRAINT "RecruiterProfile_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Company" ADD CONSTRAINT "Company_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -602,6 +689,12 @@ ALTER TABLE "Shortlist" ADD CONSTRAINT "Shortlist_companyId_fkey" FOREIGN KEY ("
 ALTER TABLE "Shortlist" ADD CONSTRAINT "Shortlist_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "RecruiterApplication" ADD CONSTRAINT "RecruiterApplication_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RecruiterApplication" ADD CONSTRAINT "RecruiterApplication_reviewedBy_fkey" FOREIGN KEY ("reviewedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "FormField" ADD CONSTRAINT "FormField_formTemplateId_fkey" FOREIGN KEY ("formTemplateId") REFERENCES "FormTemplate"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -620,40 +713,43 @@ ALTER TABLE "RequestAnswer" ADD CONSTRAINT "RequestAnswer_recruitRequestId_fkey"
 ALTER TABLE "RequestAnswer" ADD CONSTRAINT "RequestAnswer_formFieldId_fkey" FOREIGN KEY ("formFieldId") REFERENCES "FormField"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Project" ADD CONSTRAINT "Project_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "JobOpening" ADD CONSTRAINT "JobOpening_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProjectSkill" ADD CONSTRAINT "ProjectSkill_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "JobSkill" ADD CONSTRAINT "JobSkill_jobOpeningId_fkey" FOREIGN KEY ("jobOpeningId") REFERENCES "JobOpening"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProjectSkill" ADD CONSTRAINT "ProjectSkill_skillId_fkey" FOREIGN KEY ("skillId") REFERENCES "Skill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "JobSkill" ADD CONSTRAINT "JobSkill_skillId_fkey" FOREIGN KEY ("skillId") REFERENCES "Skill"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Application" ADD CONSTRAINT "Application_jobOpeningId_fkey" FOREIGN KEY ("jobOpeningId") REFERENCES "JobOpening"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Application" ADD CONSTRAINT "Application_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contract" ADD CONSTRAINT "Contract_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Engagement" ADD CONSTRAINT "Engagement_jobOpeningId_fkey" FOREIGN KEY ("jobOpeningId") REFERENCES "JobOpening"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contract" ADD CONSTRAINT "Contract_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Engagement" ADD CONSTRAINT "Engagement_recruiterProfileId_fkey" FOREIGN KEY ("recruiterProfileId") REFERENCES "RecruiterProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contract" ADD CONSTRAINT "Contract_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Engagement" ADD CONSTRAINT "Engagement_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Contract" ADD CONSTRAINT "Contract_proposalId_fkey" FOREIGN KEY ("proposalId") REFERENCES "Proposal"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Engagement" ADD CONSTRAINT "Engagement_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "Application"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Milestone" ADD CONSTRAINT "Milestone_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Placement" ADD CONSTRAINT "Placement_engagementId_fkey" FOREIGN KEY ("engagementId") REFERENCES "Engagement"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_engagementId_fkey" FOREIGN KEY ("engagementId") REFERENCES "Engagement"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_milestoneId_fkey" FOREIGN KEY ("milestoneId") REFERENCES "Milestone"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_placementId_fkey" FOREIGN KEY ("placementId") REFERENCES "Placement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Review" ADD CONSTRAINT "Review_authorCompanyId_fkey" FOREIGN KEY ("authorCompanyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -665,7 +761,7 @@ ALTER TABLE "Review" ADD CONSTRAINT "Review_authorRecruiterId_fkey" FOREIGN KEY 
 ALTER TABLE "Review" ADD CONSTRAINT "Review_targetRecruiterId_fkey" FOREIGN KEY ("targetRecruiterId") REFERENCES "RecruiterProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MessageThread" ADD CONSTRAINT "MessageThread_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "MessageThread" ADD CONSTRAINT "MessageThread_engagementId_fkey" FOREIGN KEY ("engagementId") REFERENCES "Engagement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "MessageThread" ADD CONSTRAINT "MessageThread_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -19,6 +19,7 @@ import { ApplicationsModule } from './modules/applications/applications.module';
 import { EngagementsModule } from './modules/engagements/engagements.module';
 import { PlacementsModule } from './modules/placements/placements.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AdminModule } from './modules/admin/admin.module';
     EngagementsModule,
     PlacementsModule,
     AdminModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [

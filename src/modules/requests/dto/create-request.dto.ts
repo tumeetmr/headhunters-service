@@ -2,6 +2,8 @@ import {
   IsArray,
   IsEnum,
   IsNotEmpty,
+  IsObject,
+  IsOptional,
   IsString,
   IsUUID,
   ValidateNested,
@@ -19,6 +21,10 @@ export class AnswerDto {
 }
 
 export class CreateRequestDto {
+  @IsOptional()
+  @IsUUID()
+  formTemplateId?: string;
+
   @IsUUID()
   recruiterId: string;
 
@@ -29,6 +35,22 @@ export class CreateRequestDto {
 }
 
 export class UpdateRequestStatusDto {
+  @IsEnum(RequestStatus)
+  status: RequestStatus;
+}
+
+export class CounterProposalDto {
+  @IsOptional()
+  @IsObject()
+  proposal?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  message?: string;
+}
+
+export class ResolveCounterProposalDto {
   @IsEnum(RequestStatus)
   status: RequestStatus;
 }

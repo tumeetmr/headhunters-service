@@ -1,8 +1,9 @@
 import { IsOptional, IsString, IsUUID, IsUrl } from 'class-validator';
 
 export class CreateCompanyDto {
+  @IsOptional()
   @IsUUID()
-  userId: string;
+  userId?: string;
 
   @IsString()
   name: string;

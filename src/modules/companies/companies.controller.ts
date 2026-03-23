@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Put,
@@ -11,6 +13,7 @@ import {
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
+import { AddShortlistDto } from './dto/shortlist.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -22,8 +25,26 @@ export class CompaniesController {
 
   @Post()
   @Roles(Role.COMPANY, Role.ADMIN)
-  create(@Body() dto: CreateCompanyDto) {
-    return this.companiesService.create(dto);
+  create(
+    @Body() dto: CreateCompanyDto,
+    @CurrentUser() user: { id: string; role: string },
+  ) {
+    if (user.role === Role.COMPANY && dto.userId && dto.userId !== user.id) {
+      throw new ForbiddenException(
+        'You cannot create a company for another user',
+      );
+    }
+
+    const resolvedUserId = user.role === Role.COMPANY ? user.id : dto.userId;
+
+    if (!resolvedUserId) {
+      throw new BadRequestException(
+        'userId is required when admin creates a company',
+      );
+    }
+
+    const payload = { ...dto, userId: resolvedUserId };
+    return this.companiesService.create(payload);
   }
 
   @Public()
@@ -36,6 +57,33 @@ export class CompaniesController {
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string) {
     return this.companiesService.findBySlug(slug);
+  }
+
+  @Get('shortlist')
+  @Roles(Role.COMPANY)
+  getShortlist(@CurrentUser('id') userId: string) {
+    return this.companiesService.getShortlistByUserId(userId);
+  }
+
+  @Post('shortlist')
+  @Roles(Role.COMPANY)
+  addShortlist(
+    @CurrentUser('id') userId: string,
+    @Body() dto: AddShortlistDto,
+  ) {
+    return this.companiesService.addToShortlistByUserId(userId, dto);
+  }
+
+  @Delete('shortlist/:shortlistId')
+  @Roles(Role.COMPANY)
+  removeShortlist(
+    @CurrentUser('id') userId: string,
+    @Param('shortlistId', ParseUUIDPipe) shortlistId: string,
+  ) {
+    return this.companiesService.removeFromShortlistByUserId(
+      userId,
+      shortlistId,
+    );
   }
 
   @Public()

@@ -24,7 +24,7 @@ export class JobOpeningsService {
     deadline?: Date;
   }) {
     const { skillIds = [], ...jobOpeningData } = data;
-    
+
     return this.prisma.jobOpening.create({
       data: {
         ...jobOpeningData,
@@ -60,7 +60,9 @@ export class JobOpeningsService {
       where.OR = [
         { title: { contains: filters.search, mode: 'insensitive' } },
         { description: { contains: filters.search, mode: 'insensitive' } },
-        { company: { name: { contains: filters.search, mode: 'insensitive' } } },
+        {
+          company: { name: { contains: filters.search, mode: 'insensitive' } },
+        },
       ];
     }
 
@@ -93,7 +95,7 @@ export class JobOpeningsService {
       orderBy = { salaryMin: 'asc' };
     }
 
-    let queryBuilder = this.prisma.jobOpening.findMany({
+    const queryBuilder = this.prisma.jobOpening.findMany({
       where,
       include: {
         company: true,

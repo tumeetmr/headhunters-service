@@ -37,8 +37,8 @@ export enum PaymentStatus {
 
 // Company Plan Features Interface
 export interface CompanyPlanFeatures {
-  max_active_projects: number;      // -1 = unlimited
-  max_proposals_viewable: number;   // -1 = unlimited
+  max_active_projects: number; // -1 = unlimited
+  max_proposals_viewable: number; // -1 = unlimited
   can_direct_message: boolean;
   can_shortlist: boolean;
   can_post_recruit_request: boolean;
@@ -48,7 +48,10 @@ export interface CompanyPlanFeatures {
 }
 
 // Default Plan Features
-export const DEFAULT_PLAN_FEATURES: Record<CompanyPlanName, CompanyPlanFeatures> = {
+export const DEFAULT_PLAN_FEATURES: Record<
+  CompanyPlanName,
+  CompanyPlanFeatures
+> = {
   [CompanyPlanName.BASIC]: {
     max_active_projects: 1,
     max_proposals_viewable: 3,
@@ -173,6 +176,8 @@ export enum FormFieldType {
 
 export enum RequestStatus {
   PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+  COUNTER_PROPOSED = 'COUNTER_PROPOSED',
   COMPLETED = 'COMPLETED',
   DECLINED = 'DECLINED',
 }

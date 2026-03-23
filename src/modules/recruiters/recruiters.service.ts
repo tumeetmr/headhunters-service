@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateRecruiterProfileDto } from './dto/create-recruiter.dto';
 import { UpdateRecruiterProfileDto } from './dto/update-recruiter.dto';
@@ -6,6 +10,7 @@ import { CreateRecruiterTagDto } from './dto/create-recruiter-tag.dto';
 import { CreateRecruiterLinkDto } from './dto/create-recruiter-link.dto';
 import { CreateActiveSearchDto } from './dto/create-active-search.dto';
 import { CreateInsightDto } from './dto/create-insight.dto';
+import { CreateRecruiterRatingDto } from './dto/create-recruiter-rating.dto';
 
 const PROFILE_INCLUDE = {
   tags: {
@@ -47,11 +52,11 @@ export class RecruitersService {
 
   findAll(visibility?: string, isLeadPartner?: boolean) {
     const where: any = {};
-    
+
     if (visibility) {
       where.visibility = visibility;
     }
-    
+
     if (isLeadPartner !== undefined) {
       where.isLeadPartner = isLeadPartner;
     }
@@ -174,21 +179,19 @@ export class RecruitersService {
   // ─── Insights ──────────────────────────────────────────
 
   async getPlatformInsights() {
-    const [
-      recruitersCount,
-      activeSearchesCount,
-      countriesCount,
-      skillsCount,
-    ] = await Promise.all([
-      this.prisma.recruiterProfile.count({ where: { visibility: 'PUBLISHED' } }),
-      this.prisma.activeSearch.count({ where: { status: 'ACTIVE' } }),
-      this.prisma.recruiterProfile.findMany({
-        distinct: ['location'],
-        select: { location: true },
-        where: { visibility: 'PUBLISHED', location: { not: null } },
-      }),
-      this.prisma.recruiterTag.count(),
-    ]);
+    const [recruitersCount, activeSearchesCount, countriesCount, skillsCount] =
+      await Promise.all([
+        this.prisma.recruiterProfile.count({
+          where: { visibility: 'PUBLISHED' },
+        }),
+        this.prisma.activeSearch.count({ where: { status: 'ACTIVE' } }),
+        this.prisma.recruiterProfile.findMany({
+          distinct: ['location'],
+          select: { location: true },
+          where: { visibility: 'PUBLISHED', location: { not: null } },
+        }),
+        this.prisma.recruiterTag.count(),
+      ]);
 
     return [
       {
@@ -229,5 +232,152 @@ export class RecruitersService {
 
   removeInsight(insightId: string) {
     return this.prisma.recruiterInsight.delete({ where: { id: insightId } });
+  }
+
+  async addRating(
+    profileId: string,
+    dto: CreateRecruiterRatingDto,
+    userId: string,
+  ) {
+    const recruiter = await this.prisma.recruiterProfile.findUnique({
+      where: { id: profileId },
+      select: { id: true },
+    });
+
+    if (!recruiter) {
+      throw new NotFoundException('Recruiter not found');
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Company profile not found');
+    }
+
+    const engagement = await this.prisma.engagement.findFirst({
+      where: {
+        companyId: company.id,
+        recruiterProfileId: profileId,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+
+    if (!engagement) {
+      throw new BadRequestException(
+        'You can rate this recruiter after an engagement is created',
+      );
+    }
+
+    const existingReview = await this.prisma.review.findFirst({
+      where: {
+        engagementId: engagement.id,
+        authorCompanyId: company.id,
+        targetRecruiterId: profileId,
+      },
+      select: { id: true },
+    });
+
+    const comment = dto.review?.trim() || null;
+
+    if (existingReview) {
+      await this.prisma.review.update({
+        where: { id: existingReview.id },
+        data: {
+          rating: dto.rating,
+          comment,
+          isPublic: true,
+        },
+      });
+    } else {
+      await this.prisma.review.create({
+        data: {
+          engagementId: engagement.id,
+          authorCompanyId: company.id,
+          targetRecruiterId: profileId,
+          rating: dto.rating,
+          comment,
+          isPublic: true,
+        },
+      });
+    }
+
+    const ratingAggregate = await this.prisma.review.aggregate({
+      where: {
+        targetRecruiterId: profileId,
+        isPublic: true,
+      },
+      _avg: { rating: true },
+    });
+
+    const averageRating = ratingAggregate._avg.rating ?? 0;
+
+    const updatedRecruiter = await this.prisma.recruiterProfile.update({
+      where: { id: profileId },
+      data: { rating: averageRating },
+      select: {
+        id: true,
+        rating: true,
+      },
+    });
+
+    return {
+      recruiterId: updatedRecruiter.id,
+      rating: updatedRecruiter.rating,
+    };
+  }
+
+  async getMyRating(profileId: string, userId: string) {
+    const recruiter = await this.prisma.recruiterProfile.findUnique({
+      where: { id: profileId },
+      select: { id: true },
+    });
+
+    if (!recruiter) {
+      throw new NotFoundException('Recruiter not found');
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Company profile not found');
+    }
+
+    const [engagement, review] = await Promise.all([
+      this.prisma.engagement.findFirst({
+        where: {
+          companyId: company.id,
+          recruiterProfileId: profileId,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      }),
+      this.prisma.review.findFirst({
+        where: {
+          authorCompanyId: company.id,
+          targetRecruiterId: profileId,
+        },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+    ]);
+
+    return {
+      canRate: Boolean(engagement),
+      hasRated: Boolean(review),
+      review,
+    };
   }
 }

@@ -1,10 +1,46 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { DEFAULT_PLAN_FEATURES, CompanyPlanFeatures, SubscriptionStatus } from '../../common/enums';
+import {
+  DEFAULT_PLAN_FEATURES,
+  CompanyPlanFeatures,
+  SubscriptionStatus,
+} from '../../common/enums';
+import { Role } from '../../common/enums';
 
 @Injectable()
 export class SubscriptionsService {
   constructor(private prisma: PrismaService) {}
+
+  async createOrUpdateSubscriptionForUser(
+    companyId: string,
+    planId: string,
+    user: { id: string; role: string },
+  ) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { userId: true },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+
+    const isAdmin = user.role === Role.ADMIN;
+    const isOwner = company.userId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException(
+        'You can only manage your own company subscription',
+      );
+    }
+
+    return this.createOrUpdateSubscription(companyId, planId);
+  }
 
   /**
    * Get all active subscription plans
@@ -172,7 +208,10 @@ export class SubscriptionsService {
   /**
    * Check if company can perform an action based on subscription features
    */
-  async canPerformAction(companyId: string, action: keyof CompanyPlanFeatures): Promise<boolean> {
+  async canPerformAction(
+    companyId: string,
+    action: keyof CompanyPlanFeatures,
+  ): Promise<boolean> {
     const features = await this.getCompanyFeatures(companyId);
 
     const featureValue = features[action];
@@ -195,11 +234,14 @@ export class SubscriptionsService {
    */
   async checkLimitReached(
     companyId: string,
-    limitKey: 'max_active_projects' | 'max_proposals_viewable' | 'featured_projects',
+    limitKey:
+      | 'max_active_projects'
+      | 'max_proposals_viewable'
+      | 'featured_projects',
     currentCount: number,
   ): Promise<boolean> {
     const features = await this.getCompanyFeatures(companyId);
-    const limit = features[limitKey] as number;
+    const limit = features[limitKey];
 
     // -1 means unlimited
     if (limit === -1) return false;
