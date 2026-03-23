@@ -1,11 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Role } from '../../common/enums';
 
 @Injectable()
 export class JobOpeningsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: {
+  private async getCompanyForUser(userId: string) {
+    const company = await this.prisma.company.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Company profile not found for current user');
+    }
+
+    return company;
+  }
+
+  async createForUser(
+    userId: string,
+    userRole: string,
+    data: {
     companyId: string;
     title: string;
     description: string;
@@ -22,11 +39,21 @@ export class JobOpeningsService {
     feeFixed?: number;
     skillIds?: string[];
     deadline?: Date;
-  }) {
-    const { skillIds = [], ...jobOpeningData } = data;
+  },
+  ) {
+    const { skillIds = [], companyId, ...jobOpeningData } = data;
+    const resolvedCompanyId =
+      userRole === Role.ADMIN
+        ? companyId
+        : (await this.getCompanyForUser(userId)).id;
+
+    if (!resolvedCompanyId) {
+      throw new ForbiddenException('companyId is required for admin users');
+    }
 
     return this.prisma.jobOpening.create({
       data: {
+        companyId: resolvedCompanyId,
         ...jobOpeningData,
         skills: {
           create: skillIds.map((skillId) => ({
@@ -144,6 +171,31 @@ export class JobOpeningsService {
     });
   }
 
+  async updateForUser(
+    id: string,
+    userId: string,
+    userRole: string,
+    data: Partial<any>,
+  ) {
+    const opening = await this.prisma.jobOpening.findUnique({
+      where: { id },
+      select: { id: true, companyId: true },
+    });
+
+    if (!opening) {
+      throw new NotFoundException('Job opening not found');
+    }
+
+    if (userRole === Role.COMPANY) {
+      const company = await this.getCompanyForUser(userId);
+      if (opening.companyId !== company.id) {
+        throw new ForbiddenException('You can update only your own job openings');
+      }
+    }
+
+    return this.update(id, data);
+  }
+
   async findByCompany(companyId: string, status?: string) {
     return this.prisma.jobOpening.findMany({
       where: {
@@ -156,5 +208,16 @@ export class JobOpeningsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async findByCompanyForUser(companyId: string, userId: string, userRole: string) {
+    if (userRole === Role.COMPANY) {
+      const company = await this.getCompanyForUser(userId);
+      if (company.id !== companyId) {
+        throw new ForbiddenException('You can only access your own company job openings');
+      }
+    }
+
+    return this.findByCompany(companyId);
   }
 }

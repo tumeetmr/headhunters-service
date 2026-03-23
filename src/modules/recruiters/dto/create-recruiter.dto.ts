@@ -12,9 +12,6 @@ import {
 import { ProfileVisibility } from '../../../common/enums';
 
 export class CreateRecruiterProfileDto {
-  @IsUUID()
-  userId: string;
-
   @IsOptional()
   @IsString()
   slug?: string;

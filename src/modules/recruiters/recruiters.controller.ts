@@ -30,8 +30,11 @@ export class RecruitersController {
 
   @Post()
   @Roles(Role.RECRUITER, Role.ADMIN)
-  create(@Body() dto: CreateRecruiterProfileDto) {
-    return this.recruitersService.create(dto);
+  create(
+    @Body() dto: CreateRecruiterProfileDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.recruitersService.createForUser(userId, dto);
   }
 
   @Public()

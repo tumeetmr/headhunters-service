@@ -29,10 +29,11 @@ export class RecruitersService {
 
   // ─── Profile CRUD ──────────────────────────────────────
 
-  create(dto: CreateRecruiterProfileDto) {
+  createForUser(userId: string, dto: CreateRecruiterProfileDto) {
     const { skillIds, ...data } = dto;
     return this.prisma.recruiterProfile.create({
       data: {
+        userId,
         ...data,
         tags: skillIds?.length
           ? {

@@ -679,42 +679,6 @@ async function main() {
       },
       isActive: true,
     },
-    {
-      name: 'BUSINESS',
-      description: 'For established organizations with ongoing needs',
-      price: 199900,
-      currency: 'MNT',
-      interval: 'MONTHLY',
-      features: {
-        max_active_projects: 25,
-        max_proposals_viewable: -1,
-        can_direct_message: true,
-        can_shortlist: true,
-        can_post_recruit_request: true,
-        featured_projects: 5,
-        dedicated_account_manager: true,
-        analytics_access: true,
-      },
-      isActive: true,
-    },
-    {
-      name: 'ENTERPRISE',
-      description: 'For large organizations with advanced needs',
-      price: 499900,
-      currency: 'MNT',
-      interval: 'MONTHLY',
-      features: {
-        max_active_projects: -1,
-        max_proposals_viewable: -1,
-        can_direct_message: true,
-        can_shortlist: true,
-        can_post_recruit_request: true,
-        featured_projects: 15,
-        dedicated_account_manager: true,
-        analytics_access: true,
-      },
-      isActive: true,
-    },
   ];
 
   for (const planData of subscriptionPlansData) {

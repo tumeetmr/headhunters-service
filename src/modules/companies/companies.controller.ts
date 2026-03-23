@@ -1,7 +1,5 @@
 import {
-  BadRequestException,
   Controller,
-  ForbiddenException,
   Get,
   Post,
   Put,
@@ -27,24 +25,9 @@ export class CompaniesController {
   @Roles(Role.COMPANY, Role.ADMIN)
   create(
     @Body() dto: CreateCompanyDto,
-    @CurrentUser() user: { id: string; role: string },
+    @CurrentUser('id') userId: string,
   ) {
-    if (user.role === Role.COMPANY && dto.userId && dto.userId !== user.id) {
-      throw new ForbiddenException(
-        'You cannot create a company for another user',
-      );
-    }
-
-    const resolvedUserId = user.role === Role.COMPANY ? user.id : dto.userId;
-
-    if (!resolvedUserId) {
-      throw new BadRequestException(
-        'userId is required when admin creates a company',
-      );
-    }
-
-    const payload = { ...dto, userId: resolvedUserId };
-    return this.companiesService.create(payload);
+    return this.companiesService.createForUser(userId, dto);
   }
 
   @Public()

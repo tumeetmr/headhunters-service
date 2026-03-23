@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -34,12 +33,8 @@ export class CompaniesService {
     return company;
   }
 
-  async create(dto: CreateCompanyDto) {
-    const { skillIds, userId, ...data } = dto;
-
-    if (!userId) {
-      throw new BadRequestException('userId is required');
-    }
+  async createForUser(userId: string, dto: CreateCompanyDto) {
+    const { skillIds, ...data } = dto;
 
     const createdCompany = await this.prisma.$transaction(async (tx) => {
       const company = await tx.company.create({

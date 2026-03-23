@@ -1,6 +1,18 @@
-import { Controller, Get, Post, Body, Param, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { Public } from '../auth/decorators/public.decorator';
 import { JobOpeningsService } from './job-openings.service';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Role } from '../../common/enums';
 
 @Controller('job-openings')
 export class JobOpeningsController {
@@ -41,6 +53,7 @@ export class JobOpeningsController {
   }
 
   @Post()
+  @Roles(Role.COMPANY, Role.ADMIN)
   async create(
     @Body()
     body: {
@@ -61,17 +74,30 @@ export class JobOpeningsController {
       skillIds?: string[];
       deadline?: Date;
     },
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
   ) {
-    return this.service.create(body);
+    return this.service.createForUser(userId, userRole, body);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any) {
-    return this.service.update(id, body);
+  @Roles(Role.COMPANY, Role.ADMIN)
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: any,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    return this.service.updateForUser(id, userId, userRole, body);
   }
 
   @Get('company/:companyId')
-  async findByCompany(@Param('companyId') companyId: string) {
-    return this.service.findByCompany(companyId);
+  @Roles(Role.COMPANY, Role.ADMIN)
+  async findByCompany(
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    return this.service.findByCompanyForUser(companyId, userId, userRole);
   }
 }
